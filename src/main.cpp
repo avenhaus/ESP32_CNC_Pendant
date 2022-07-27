@@ -40,6 +40,7 @@ adcInit();
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);  
 
+  
   vuefInit();
 
   // This must be executed before Display initialization.
@@ -87,10 +88,10 @@ void loop() {
   if (inputSameCount == 5) { // Simple debounce
 
     encoderLeft.update((extended_inputs >> LEFT_ENCODER1_A_BIT) & 3);
-    if (encoderLeft.delta) { cncChangeStep(encoderLeft.delta); }
+    if (encoderLeft.delta) { cncIncJogStep(encoderLeft.delta); }
     //!EX_INPUT(LEFT_ENCODER1_BUTTON_BIT);
     encoderRight.update((extended_inputs >> RIGHT_ENCODER1_A_BIT) & 3);
-    if (encoderRight.delta) { cncChangeSpeed(encoderRight.delta); }
+    if (encoderRight.delta) { cncIncJogFeed(encoderRight.delta); }
     //!EX_INPUT(RIGHT_ENCODER1_BUTTON_BIT);
 
     // DEBUG_printf(FST("Inputs: %08X  L:%d  R:%d \n"), ~extended_inputs, encoderLeft.counter, encoderRight.counter);
@@ -123,5 +124,5 @@ void loop() {
 
   encoderMain.update(digitalRead(ENCODER0_B_PIN)<<1 | digitalRead(ENCODER0_A_PIN));
   //int64_t val = encoderMainDial.getCount(); 
-  if (encoderMain.delta) { cncJogCurrentAxis(encoderMain.delta); }
+  if (encoderMain.delta) { cncJogAxis(encoderMain.delta); }
 }

@@ -288,7 +288,6 @@ void displayBootScreen() {
 
 
 #if ENABLE_WIFI
-  char buffer[64];
   tft.setCursor(0, 20);
   tft.setTextSize(1);
   tft.setFont(&fonts::Font4);

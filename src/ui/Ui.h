@@ -16,17 +16,25 @@ extern lv_obj_t* uiStatusBarState;
 
 
 // Axis Panel
-typedef struct UiAxis {
+typedef struct UiAxisCoord {
     lv_obj_t* label;
     lv_obj_t* text;
     const char* fmt;
-    char letter;
+} UiAxisCoord;
+
+typedef struct UiAxis {
+    UiAxisCoord world;
+    UiAxisCoord machine;
+    lv_obj_t* wZeroButton;
 } UiAxis;
 
-lv_obj_t* uiCreatePanelAxis(lv_obj_t* parent, lv_coord_t x, lv_coord_t y);
 
-extern lv_obj_t* uiPanelAxis;
-extern UiAxis uiAxis[4];
+lv_obj_t* uiCreatePanelWAxis(lv_obj_t* parent, lv_coord_t x, lv_coord_t y);
+lv_obj_t* uiCreatePanelMAxis(lv_obj_t* parent, lv_coord_t x, lv_coord_t y);
+
+extern lv_obj_t* uiPanelWAxis;
+extern lv_obj_t* uiPanelMAxis;
+extern UiAxis uiAxis[6];
 
 
 // Jog Panel
@@ -36,11 +44,13 @@ typedef struct UiSetting {
     const char* fmt;
 } UiSetting;
 
-lv_obj_t* uiCreatePanelJogSettings(lv_obj_t* parent, lv_coord_t x, lv_coord_t y);
+lv_obj_t* uiCreatePanelSettings(lv_obj_t* parent, lv_coord_t x, lv_coord_t y);
 
-extern lv_obj_t* uiPanelJogSettings;
-extern UiSetting uiPanelJogDistance;
-extern UiSetting uiPanelJogSpeed;
+extern lv_obj_t* uiPanelSettings;
+extern UiSetting uiPanelSettingsFeed;
+extern UiSetting uiPanelSettingsSpeed;
+extern UiSetting uiPanelSettingsJogFeed;
+extern UiSetting uiPanelSettingsJogStep;
 
 
 // Keyboard
@@ -58,6 +68,9 @@ void uiShowKeyboard(const char* description=nullptr, const char* text=nullptr, c
 #define UI_COLOR_PANEL_BORDER 0x13DD33
 #define UI_COLOR_PANEL_SELECT 0x207820
 #define UI_COLOR_KEYBOARD_BORDER 0x7E7AE1
+#define UI_COLOR_BUTTON_BG 0x085010
+#define UI_COLOR_BUTTON_SHADOW 0x11D137
+#define UI_COLOR_BUTTON_BG_PRESSED 0xA0D020
 
 extern const char* UI_AXIS_PREC;
 

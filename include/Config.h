@@ -86,6 +86,9 @@ GPIO_34 - GPIO_39 have no internal pullup / pulldown.
 
 #define BUZZER_PIN 21
 
+#define UART2_RXD 16
+#define UART2_TXD 17
+
 #define INPUT_SPI_CHANNEL VSPI
 #define INPUT_SPI_SPEED 10000000
 #define INPUT_SCK_PIN 0

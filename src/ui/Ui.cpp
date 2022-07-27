@@ -5,7 +5,7 @@
 \* ============================================== */
 lv_obj_t * uiMainScreen;
 
-PROGMEM const char* UI_AXIS_PREC = "%0.2f";
+PROGMEM const char* UI_AXIS_PREC = "%0.3f";
 
 /* ============================================== *\
  * Functions
@@ -17,8 +17,9 @@ void uiMainScreenInit(void) {
     uiMainScreen = lv_obj_create(NULL);
     lv_obj_clear_flag(uiMainScreen, LV_OBJ_FLAG_SCROLLABLE);
     uiCreateStatusBar(uiMainScreen);
-    uiCreatePanelAxis(uiMainScreen, 5, 25);
-    uiCreatePanelJogSettings(uiMainScreen, 5, 180);
+    uiCreatePanelWAxis(uiMainScreen, 5, 30);
+    uiCreatePanelMAxis(uiMainScreen, 260, 30);
+    uiCreatePanelSettings(uiMainScreen, 5, 185);
     uiCreateKeyboard(uiMainScreen);
 }
 
