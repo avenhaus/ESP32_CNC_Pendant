@@ -23,7 +23,7 @@ typedef struct UiAxisCoord {
 } UiAxisCoord;
 
 typedef struct UiAxis {
-    UiAxisCoord world;
+    UiAxisCoord work;
     UiAxisCoord machine;
     lv_obj_t* wZeroButton;
 } UiAxis;
@@ -31,13 +31,15 @@ typedef struct UiAxis {
 
 lv_obj_t* uiCreatePanelWAxis(lv_obj_t* parent, lv_coord_t x, lv_coord_t y);
 lv_obj_t* uiCreatePanelMAxis(lv_obj_t* parent, lv_coord_t x, lv_coord_t y);
+void uiUpdateAxisValue(UiAxisCoord& s, float v);
+void uiHighlightAxis(int axis);
 
 extern lv_obj_t* uiPanelWAxis;
 extern lv_obj_t* uiPanelMAxis;
 extern UiAxis uiAxis[6];
 
 
-// Jog Panel
+// Setting Panel
 typedef struct UiSetting {
     lv_obj_t* label;
     lv_obj_t* text;
@@ -45,12 +47,16 @@ typedef struct UiSetting {
 } UiSetting;
 
 lv_obj_t* uiCreatePanelSettings(lv_obj_t* parent, lv_coord_t x, lv_coord_t y);
+void uiUpdateSettingValue(UiSetting& s, float v);
 
 extern lv_obj_t* uiPanelSettings;
 extern UiSetting uiPanelSettingsFeed;
 extern UiSetting uiPanelSettingsSpeed;
 extern UiSetting uiPanelSettingsJogFeed;
 extern UiSetting uiPanelSettingsJogStep;
+
+
+extern lv_obj_t* uiCncStateLabel;
 
 
 // Keyboard

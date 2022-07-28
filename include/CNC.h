@@ -3,12 +3,6 @@
 
 #include "Arduino.h"
 
-void cncInit();
-void cncRun(uint32_t now=0);
-void cncIncFeed(int32_t steps);
-void cncIncJogFeed(int32_t steps);
-void cncIncJogStep(int32_t steps);
-void cncJogAxis(int32_t steps);
 
 /* ============================================== *\
  * Axis
@@ -23,6 +17,9 @@ public:
     float incFeed(int32_t steps);
     float incJogFeed(int32_t steps);
     float incJogStep(int32_t steps);
+    void showWorkCoordinates();
+    void showMachineCoordinates();
+
 
     CncAxisEnum axis;
     char letter;
@@ -33,6 +30,15 @@ public:
     StateFloat machinePos;
     StateFloat workCoordinate;
 };
+
+void cncInit();
+void cncRun(uint32_t now=0);
+CncAxisEnum cncIncActiveAxis(int32_t steps);
+void cncIncFeed(int32_t steps);
+void cncIncJogFeed(int32_t steps);
+void cncIncJogStep(int32_t steps);
+void cncJogAxis(int32_t steps);
+
 
 /* ============================================== *\
  * Constants

@@ -4,6 +4,7 @@
  * Variables
 \* ============================================== */
 lv_obj_t * uiMainScreen;
+lv_obj_t * uiCncStateLabel;
 
 PROGMEM const char* UI_AXIS_PREC = "%0.3f";
 
@@ -17,10 +18,22 @@ void uiMainScreenInit(void) {
     uiMainScreen = lv_obj_create(NULL);
     lv_obj_clear_flag(uiMainScreen, LV_OBJ_FLAG_SCROLLABLE);
     uiCreateStatusBar(uiMainScreen);
-    uiCreatePanelWAxis(uiMainScreen, 5, 30);
-    uiCreatePanelMAxis(uiMainScreen, 260, 30);
-    uiCreatePanelSettings(uiMainScreen, 5, 185);
+    uiCreatePanelWAxis(uiMainScreen, 5, 29);
+    uiCreatePanelMAxis(uiMainScreen, 260, 29);
+    uiCreatePanelSettings(uiMainScreen, 5, 183);
     uiCreateKeyboard(uiMainScreen);
+
+    uiCncStateLabel = lv_label_create(uiMainScreen);
+    lv_obj_set_size(uiCncStateLabel, 140, LV_SIZE_CONTENT);
+    lv_obj_set_pos(uiCncStateLabel, 0, 0);
+    lv_obj_set_align(uiCncStateLabel, LV_ALIGN_BOTTOM_LEFT);
+    lv_label_set_text(uiCncStateLabel, FST("???"));
+    lv_obj_set_style_text_align(uiCncStateLabel, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(uiCncStateLabel, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(uiCncStateLabel, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(uiCncStateLabel, lv_color_hex(0x808080), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(uiCncStateLabel, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(uiCncStateLabel, &lv_font_montserrat_22, LV_PART_MAIN | LV_STATE_DEFAULT);
 }
 
 void uiInit(void) {

@@ -3,6 +3,7 @@
 #include "Config.h"
 #include "VUEF.h"
 #include "ui.h"
+#include "uiHelper.h"
 #include "CNC.h"
 
 // http://fluidnc.local/  192.168.0.184
@@ -17,14 +18,13 @@ uint32_t cncStatusTs_ = 0;
 char cncStreamReadBuffer[CNC_STREAM_BUFFER_SIZE];
 size_t cncStreamReadBufferIndex = 0;
 
-
-
 const char* PROGMEM CNC_HOST = "http://fluidnc.local/";
 
 RegGroup configGroupCNC(FST("CNC"));
 ConfigUInt32 configUart2Speed(FST("Baud"), 115200, FST("UART2 Speed"), 0, &configGroupCNC);
 ConfigUInt32 configCheckStatusInterval(FST("Status Check"), 3000, FST("Check CNC status interval"), 0, &configGroupCNC);
 ConfigStr configCncHost(FST("Host"), 32, CNC_HOST, FST("CNC"), 0, &configGroupCNC);
+ConfigUInt8 configAxesCount(FST("Axes"), 3, FST("Number of axes"), 0, &configGroupCNC);
 
 typedef enum CncConnectionTypeEnum {CCT_NONE, CCT_WIFI, CCT_BT, CCT_UART, CCT_USB } CncConnectionTypeEnum;
 const ConfigEnum::Option configCncConnectionTypeOptions[] PROGMEM = {
@@ -78,6 +78,22 @@ const StateEnum::Option configCncStateOptions[] PROGMEM = {
 };
 const size_t configCncStateOptionsSize = sizeof(configCncStateOptions) / sizeof(StateEnum::Option);
 StateEnum configCncState(FST("CNC State"), configCncStateOptions, configCncStateOptionsSize, 1, FST("state"), 0, &configGroupCNC);
+
+int32_t cncStateColor[] = {
+  0xA0A0A0, // CS_UNKNOWN
+  0xA0A0A0, // CS_CONNECTING
+  0xB01010, // CS_TIMEOUT
+  0x10B0B0, // CS_IDLE
+  0xB01010, // CS_ALARM
+  0xB0B010, // CS_CHECK
+  0x10B050, // CS_HOMING
+  0x10B010, // CS_RUN
+  0x10B060, // CS_JOG
+  0xB06010, // CS_HOLD
+  0xB07030, // CS_DOOR
+  0x4040A0 // CS_SLEEP
+};
+
 
 StateFloat stateCncFeed(FST("Feed"), 0.0, FST("Current feed rate"), 0, &configGroupCNC);
 StateFloat stateCncFeedOverride(FST("Feed Override"), 0.0, FST("Feed rate override"), 0, &configGroupCNC);
@@ -133,6 +149,7 @@ void _cncSetState(const char* token) {
         configCncState.set(CS_UNKNOWN);
         DEBUG_printf(FST("Unknown CNC state: %s\n"), token);
     }
+    uiUpdateLabel(uiCncStateLabel, configCncState.getText(), -1, cncStateColor[configCncState.get()]);
 }
 
 void _parseCncResponse() {
@@ -156,14 +173,26 @@ void _parseCncResponse() {
         }
         else if (state == PS_STATE) { _cncSetState(token); }
         else if (state == PS_MPOS) {
-            if (p < CNC_AXIS_MAX-1) { cncAxis[p].machinePos.set(atof(token)); }
+            if (p < CNC_AXIS_MAX-1) { 
+                cncAxis[p].machinePos.set(atof(token));
+                cncAxis[p].showMachineCoordinates();
+            }
         }
         else if (state == PS_WCO) {
-            if (p < CNC_AXIS_MAX-1) { cncAxis[p].workCoordinate.set(atof(token)); }
+            if (p < CNC_AXIS_MAX-1) { 
+                cncAxis[p].workCoordinate.set(atof(token)); 
+                cncAxis[p].showWorkCoordinates();
+            }
         }
         else if (state == PS_FS) {
-            if (p == 0) { stateCncSpeed.set(atof(token)); }
-            else if (p == 1) { stateCncFeed.set(atof(token)); }
+            if (p == 0) { 
+                stateCncSpeed.set(atof(token)); 
+                uiUpdateSettingValue(uiPanelSettingsSpeed, stateCncSpeed.get());
+            }
+            else if (p == 1) { 
+                stateCncFeed.set(atof(token)); 
+                uiUpdateSettingValue(uiPanelSettingsFeed, stateCncFeed.get());
+            }
         }
         else if (state == PS_OV) {
             if (p == 0) { stateCncSpeedOverride.set(atof(token)); }
@@ -224,6 +253,19 @@ void cncRun(uint32_t now) {
 }
 
 
+CncAxisEnum cncIncActiveAxis(int32_t steps) {
+    int currentAxis = configCncCurrentAxis.get();
+    int old = currentAxis;
+    currentAxis += steps;
+    if (currentAxis <= 0) { currentAxis = 0; }
+    if (currentAxis >= configAxesCount.get()) { currentAxis = configAxesCount.get(); }
+    if (currentAxis != old) {
+        configCncCurrentAxis.set(currentAxis);
+        DEBUG_printf(FST("Current Axis %d\n"), currentAxis);
+        uiHighlightAxis(currentAxis - 1);
+    }
+    return (CncAxisEnum) currentAxis;
+}
 
 void cncIncJogFeed(int32_t steps) {
     size_t currentAxis = configCncCurrentAxis.get();
@@ -310,4 +352,14 @@ void cncIncFeed(int32_t steps) {
 
 void CncAxis::jog(int steps) {
     cncSendCmdJog(axis, jogFeed.get(), jogStep.get() * steps);
+}
+
+void CncAxis::showWorkCoordinates() {
+    if (axis == CNC_AXIS_NONE || axis > CNC_AXIS_A ) { return; }
+    uiUpdateAxisValue(uiAxis[axis-1].work, workCoordinate.get());
+}
+
+void CncAxis::showMachineCoordinates() {
+    if (axis == CNC_AXIS_NONE || axis > CNC_AXIS_A ) { return; }
+    uiUpdateAxisValue(uiAxis[axis-1].machine, machinePos.get());
 }

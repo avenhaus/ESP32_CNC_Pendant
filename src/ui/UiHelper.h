@@ -7,6 +7,8 @@ lv_obj_t* uiCreatePanel(lv_obj_t* parent, const lv_font_t* font, lv_coord_t x, l
 
 lv_obj_t* uiCreateButton(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h, const char* text, const lv_font_t* font, lv_event_cb_t eventCb=nullptr, void *userData=nullptr, lv_event_code_t filter=LV_EVENT_CLICKED);
 
+void uiUpdateLabel(lv_obj_t* l, const char* text, int32_t color=-1, int32_t bgColor=-1);
+
 /* ============================================== *\
  * Macros
 \* ============================================== */

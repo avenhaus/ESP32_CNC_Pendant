@@ -91,7 +91,8 @@ void loop() {
     if (encoderLeft.delta) { cncIncJogStep(encoderLeft.delta); }
     //!EX_INPUT(LEFT_ENCODER1_BUTTON_BIT);
     encoderRight.update((extended_inputs >> RIGHT_ENCODER1_A_BIT) & 3);
-    if (encoderRight.delta) { cncIncJogFeed(encoderRight.delta); }
+    //if (encoderRight.delta) { cncIncJogFeed(encoderRight.delta); }
+    if (encoderRight.delta) { cncIncActiveAxis(encoderRight.delta); }
     //!EX_INPUT(RIGHT_ENCODER1_BUTTON_BIT);
 
     // DEBUG_printf(FST("Inputs: %08X  L:%d  R:%d \n"), ~extended_inputs, encoderLeft.counter, encoderRight.counter);

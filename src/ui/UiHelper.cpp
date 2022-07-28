@@ -58,3 +58,10 @@ lv_obj_t* uiCreateButton(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_
 
     return uiButton;
 }
+
+void uiUpdateLabel(lv_obj_t* l, const char* text, int32_t color, int32_t bgColor) {
+    lv_label_set_text(l, text);
+    if (color != -1) { lv_obj_set_style_text_color(l, lv_color_hex(color), LV_PART_MAIN | LV_STATE_DEFAULT); }
+    if (bgColor != -1) { lv_obj_set_style_bg_color(l, lv_color_hex(bgColor), LV_PART_MAIN | LV_STATE_DEFAULT); }
+
+}

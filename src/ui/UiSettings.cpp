@@ -70,3 +70,9 @@ lv_obj_t* uiCreatePanelSettings(lv_obj_t* parent, lv_coord_t x, lv_coord_t y) {
     
     return uiPanelSettings;
 }
+
+void uiUpdateSettingValue(UiSetting& s, float v) {
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer)-1, s.fmt, v);   
+    lv_label_set_text(s.text, buffer);
+}
