@@ -48,6 +48,7 @@ typedef struct UiSetting {
 
 lv_obj_t* uiCreatePanelSettings(lv_obj_t* parent, lv_coord_t x, lv_coord_t y);
 void uiUpdateSettingValue(UiSetting& s, float v);
+void uiHighlightCncSetting(int setting);
 
 extern lv_obj_t* uiPanelSettings;
 extern UiSetting uiPanelSettingsFeed;
@@ -57,6 +58,7 @@ extern UiSetting uiPanelSettingsJogStep;
 
 
 extern lv_obj_t* uiCncStateLabel;
+extern lv_obj_t* uiCncPinLabel;
 
 
 // Keyboard
@@ -77,6 +79,10 @@ void uiShowKeyboard(const char* description=nullptr, const char* text=nullptr, c
 #define UI_COLOR_BUTTON_BG 0x085010
 #define UI_COLOR_BUTTON_SHADOW 0x11D137
 #define UI_COLOR_BUTTON_BG_PRESSED 0xA0D020
+#define UI_COLOR_AXIS_HIGHLIGHTED_TEXT 0xFFFF20
+#define UI_COLOR_AXIS_HIGHLIGHTED_BG 0x20B070
+#define UI_COLOR_SETTING_HIGHLIGHTED_TEXT 0x20FFFF
+#define UI_COLOR_SETTING_HIGHLIGHTED_BG 0x2070B0
 
 extern const char* UI_AXIS_PREC;
 

@@ -5,6 +5,7 @@
 \* ============================================== */
 lv_obj_t * uiMainScreen;
 lv_obj_t * uiCncStateLabel;
+lv_obj_t * uiCncPinLabel;
 
 PROGMEM const char* UI_AXIS_PREC = "%0.3f";
 
@@ -34,6 +35,21 @@ void uiMainScreenInit(void) {
     lv_obj_set_style_bg_color(uiCncStateLabel, lv_color_hex(0x808080), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(uiCncStateLabel, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(uiCncStateLabel, &lv_font_montserrat_22, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_add_flag(uiCncStateLabel, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_bg_color(uiCncStateLabel, lv_color_hex(0x505050), LV_PART_MAIN | LV_STATE_PRESSED);
+
+    uiCncPinLabel = lv_label_create(uiMainScreen);
+    lv_obj_set_size(uiCncPinLabel, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_pos(uiCncPinLabel, 0, 0);
+    lv_obj_set_align(uiCncPinLabel, LV_ALIGN_BOTTOM_RIGHT);
+    lv_label_set_text(uiCncPinLabel, FST("-"));
+    lv_obj_set_style_text_align(uiCncPinLabel, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(uiCncPinLabel, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(uiCncPinLabel, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(uiCncPinLabel, lv_color_hex(0x808080), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(uiCncPinLabel, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(uiCncPinLabel, &lv_font_montserrat_22, LV_PART_MAIN | LV_STATE_DEFAULT);
 }
 
 void uiInit(void) {

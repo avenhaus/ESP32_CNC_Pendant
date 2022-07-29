@@ -16,10 +16,12 @@ int32_t Encoder::update(uint8_t inputAB) {
   if( _state > 3 ) {        // Four steps forward
     counter++;              // Increase counter
     delta = 1;
+    dcnt++;
     _state = 0;
   } else if( _state < -3 ) {  // Four steps backwards
     counter--;               // Decrease counter
     delta = -1; 
+    dcnt--;
     _state = 0;
   } else { delta = 0; }
   return counter;

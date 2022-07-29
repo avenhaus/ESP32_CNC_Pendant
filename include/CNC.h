@@ -17,9 +17,7 @@ public:
     float incFeed(int32_t steps);
     float incJogFeed(int32_t steps);
     float incJogStep(int32_t steps);
-    void showWorkCoordinates();
-    void showMachineCoordinates();
-
+    void showCoordinates();
 
     CncAxisEnum axis;
     char letter;
@@ -39,6 +37,12 @@ void cncIncJogFeed(int32_t steps);
 void cncIncJogStep(int32_t steps);
 void cncJogAxis(int32_t steps);
 
+void cncAxisEncoderPress();
+
+
+typedef enum CncSettingsEncoderMode { CSEM_NONE, CSEM_JOG_STEP, CSEM_JOG_FEED, CSEM_FEED_OVERRIDE, CSEM_RAPIDS_OVERRIDE, CSEM_SPEED_OVERRIDE, CSEM_MAX } CncSettingsEncoderMode;
+void cncIncSettingsEncoder(int32_t steps);
+void cncChangeSettingsEncoderMode(int32_t steps);
 
 /* ============================================== *\
  * Constants

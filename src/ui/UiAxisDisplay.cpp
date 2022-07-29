@@ -9,7 +9,7 @@
 lv_obj_t* uiPanelWAxis;
 lv_obj_t* uiPanelMAxis;
 UiAxis uiAxis[6];
-int highlightedAxis = -1;
+static int _highlightedAxis = -1;
 
 /* ============================================== *\
  * Event Callbacks
@@ -101,18 +101,16 @@ void uiUpdateAxisValue(UiAxisCoord& s, float v) {
     lv_label_set_text(s.text, buffer);
 }
 
-#define UI_COLOR_AXIS_HIGHLIGHTED_TEXT 0xFFFF20
-#define UI_COLOR_AXIS_HIGHLIGHTED_BG 0x20B070
 
 void uiHighlightAxis(int axis) {
-    if (axis == highlightedAxis) { return; }
-    if (highlightedAxis >= 0) {
-        lv_obj_set_style_text_color(uiAxis[highlightedAxis].work.text, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_bg_color(uiAxis[highlightedAxis].work.text, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_bg_opa(uiAxis[highlightedAxis].work.text, 0, LV_PART_MAIN | LV_STATE_DEFAULT);        
-        lv_obj_set_style_text_color(uiAxis[highlightedAxis].machine.text, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_bg_color(uiAxis[highlightedAxis].machine.text, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_bg_opa(uiAxis[highlightedAxis].machine.text, 0, LV_PART_MAIN | LV_STATE_DEFAULT);        
+    if (axis == _highlightedAxis) { return; }
+    if (_highlightedAxis >= 0) {
+        lv_obj_set_style_text_color(uiAxis[_highlightedAxis].work.text, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(uiAxis[_highlightedAxis].work.text, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_opa(uiAxis[_highlightedAxis].work.text, 0, LV_PART_MAIN | LV_STATE_DEFAULT);        
+        lv_obj_set_style_text_color(uiAxis[_highlightedAxis].machine.text, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(uiAxis[_highlightedAxis].machine.text, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_opa(uiAxis[_highlightedAxis].machine.text, 0, LV_PART_MAIN | LV_STATE_DEFAULT);        
     }
     if (axis >= 0) {
         lv_obj_set_style_text_color(uiAxis[axis].work.text, lv_color_hex(UI_COLOR_AXIS_HIGHLIGHTED_TEXT), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -122,5 +120,5 @@ void uiHighlightAxis(int axis) {
         lv_obj_set_style_bg_color(uiAxis[axis].machine.text, lv_color_hex(UI_COLOR_AXIS_HIGHLIGHTED_BG), LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_bg_opa(uiAxis[axis].machine.text, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     }
-    highlightedAxis = axis;
+    _highlightedAxis = axis;
 }

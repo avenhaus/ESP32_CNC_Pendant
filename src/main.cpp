@@ -14,7 +14,8 @@
 void extendedInputSetup();
 uint32_t getExtendedInputs();
 extern uint32_t extended_inputs;
-extern uint32_t old_extended_inputs;
+uint32_t extended_inputs_last = 0;
+uint32_t extended_inputs_debounce = 0;
 
 // ESP32Encoder encoderMainDial;
 Encoder encoderMain;
@@ -32,6 +33,16 @@ uint32_t analogReadTs = 0;
 
 uint32_t inputSameCount = 0;
 
+void _inputTask(void* pvParameters) {
+    while(true) {
+        encoderMain.update(digitalRead(ENCODER0_B_PIN)<<1 | digitalRead(ENCODER0_A_PIN));
+        getExtendedInputs();
+        encoderLeft.update((extended_inputs >> LEFT_ENCODER1_A_BIT) & 3);
+        encoderRight.update((extended_inputs >> RIGHT_ENCODER1_A_BIT) & 3);
+        vTaskDelay(1);
+    }
+ 
+}
 
 void setup() {
 adcInit();
@@ -72,6 +83,15 @@ adcInit();
   #endif
 
   cncInit();
+
+  xTaskCreatePinnedToCore(
+    _inputTask,     // Task function
+    "net",          // String with name of task
+    2048,           // Stack size in bytes
+    NULL,           // Parameter passed as input of the task
+    1,              // Priority of the task.
+    NULL,           // Task handle.
+    1);             // Core
 }
 
 void loop() {
@@ -81,22 +101,29 @@ void loop() {
   #if ENABLE_DISPLAY
   guiRun();
   #endif
- 
-  getExtendedInputs();  
-  if (extended_inputs != old_extended_inputs) { inputSameCount = 0; }
+
+  int steps = encoderMain.getChagne();
+  if (steps) { cncJogAxis(steps); }
+  steps = encoderLeft.getChagne();
+  if (steps) { 
+    if (EX_INPUT(LEFT_ENCODER1_BUTTON_BIT)) { cncIncSettingsEncoder(steps); }
+    else { cncChangeSettingsEncoderMode(steps); }
+  }
+  steps = encoderRight.getChagne();
+  if (steps) { cncIncActiveAxis(steps); }
+  
+  if (extended_inputs != extended_inputs_debounce) { 
+    inputSameCount = 0;
+    extended_inputs_debounce = extended_inputs;
+  }
   else { inputSameCount++; }
   if (inputSameCount == 5) { // Simple debounce
-
-    encoderLeft.update((extended_inputs >> LEFT_ENCODER1_A_BIT) & 3);
-    if (encoderLeft.delta) { cncIncJogStep(encoderLeft.delta); }
-    //!EX_INPUT(LEFT_ENCODER1_BUTTON_BIT);
-    encoderRight.update((extended_inputs >> RIGHT_ENCODER1_A_BIT) & 3);
-    //if (encoderRight.delta) { cncIncJogFeed(encoderRight.delta); }
-    if (encoderRight.delta) { cncIncActiveAxis(encoderRight.delta); }
-    //!EX_INPUT(RIGHT_ENCODER1_BUTTON_BIT);
-
-    // DEBUG_printf(FST("Inputs: %08X  L:%d  R:%d \n"), ~extended_inputs, encoderLeft.counter, encoderRight.counter);
-    //DEBUG_printf(FST("Inputs: %04X\n"), extended_inputs);
+    uint32_t justPressed = (extended_inputs ^ extended_inputs_last) & ~extended_inputs;
+    if (justPressed) {
+      // DEBUG_printf(FST("Pressed: %04X\n"), justPressed);
+      if (justPressed & (1 << RIGHT_ENCODER1_BUTTON_BIT)) { cncAxisEncoderPress(); }
+    }
+    extended_inputs_last = extended_inputs;
   }
 
   if (now - analogReadTs >= 2) {
@@ -122,8 +149,5 @@ void loop() {
     esp_deep_sleep_start();
   }
   #endif
-
-  encoderMain.update(digitalRead(ENCODER0_B_PIN)<<1 | digitalRead(ENCODER0_A_PIN));
-  //int64_t val = encoderMainDial.getCount(); 
-  if (encoderMain.delta) { cncJogAxis(encoderMain.delta); }
+  vTaskDelay(1);
 }

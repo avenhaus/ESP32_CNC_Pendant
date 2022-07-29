@@ -12,6 +12,15 @@ UiSetting uiPanelSettingsSpeed;
 UiSetting uiPanelSettingsJogFeed;
 UiSetting uiPanelSettingsJogStep;
 
+
+const UiSetting* uiSetting [] = {
+    &uiPanelSettingsJogStep,
+    &uiPanelSettingsJogFeed
+};
+
+static int _highlightedSetting = -1;
+
+
 /* ============================================== *\
  * Event Callbacks
 \* ============================================== */
@@ -75,4 +84,20 @@ void uiUpdateSettingValue(UiSetting& s, float v) {
     char buffer[32];
     snprintf(buffer, sizeof(buffer)-1, s.fmt, v);   
     lv_label_set_text(s.text, buffer);
+}
+
+void uiHighlightCncSetting(int setting) {
+    if (setting >= sizeof(uiSetting) / sizeof(UiSetting*) ) { setting = -1; }
+    if (setting == _highlightedSetting) { return; }
+    if (_highlightedSetting >= 0) {
+        lv_obj_set_style_text_color(uiSetting[_highlightedSetting]->text, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(uiSetting[_highlightedSetting]->text, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_opa(uiSetting[_highlightedSetting]->text, 0, LV_PART_MAIN | LV_STATE_DEFAULT);        
+    }
+    if (setting >= 0) {
+        lv_obj_set_style_text_color(uiSetting[setting]->text, lv_color_hex(UI_COLOR_SETTING_HIGHLIGHTED_TEXT), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(uiSetting[setting]->text, lv_color_hex(UI_COLOR_SETTING_HIGHLIGHTED_BG), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_opa(uiSetting[setting]->text, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    }
+    _highlightedSetting = setting;
 }

@@ -5,7 +5,7 @@
 #include "ui.h"
 #include "uiHelper.h"
 #include "CNC.h"
-
+#include <algorithm> 
 // http://fluidnc.local/  192.168.0.184
 // http://grblesp.local/
 
@@ -13,6 +13,8 @@ Stream* cncStream = &Serial2;
 uint32_t cncTs_ = 0;
 uint32_t cncStatusCheckTs_ = 0;
 uint32_t cncStatusTs_ = 0;
+
+char cncPinStates[32] = "-";
 
 #define CNC_STREAM_BUFFER_SIZE 256
 char cncStreamReadBuffer[CNC_STREAM_BUFFER_SIZE];
@@ -22,9 +24,9 @@ const char* PROGMEM CNC_HOST = "http://fluidnc.local/";
 
 RegGroup configGroupCNC(FST("CNC"));
 ConfigUInt32 configUart2Speed(FST("Baud"), 115200, FST("UART2 Speed"), 0, &configGroupCNC);
-ConfigUInt32 configCheckStatusInterval(FST("Status Check"), 3000, FST("Check CNC status interval"), 0, &configGroupCNC);
+ConfigUInt32 configCheckStatusInterval(FST("Status Check"), 1000, FST("Check CNC status interval"), 0, &configGroupCNC);
 ConfigStr configCncHost(FST("Host"), 32, CNC_HOST, FST("CNC"), 0, &configGroupCNC);
-ConfigUInt8 configAxesCount(FST("Axes"), 3, FST("Number of axes"), 0, &configGroupCNC);
+ConfigUInt8 configAxesCount(FST("Axes"), 4, FST("Number of axes"), 0, &configGroupCNC);
 
 typedef enum CncConnectionTypeEnum {CCT_NONE, CCT_WIFI, CCT_BT, CCT_UART, CCT_USB } CncConnectionTypeEnum;
 const ConfigEnum::Option configCncConnectionTypeOptions[] PROGMEM = {
@@ -82,16 +84,16 @@ StateEnum configCncState(FST("CNC State"), configCncStateOptions, configCncState
 int32_t cncStateColor[] = {
   0xA0A0A0, // CS_UNKNOWN
   0xA0A0A0, // CS_CONNECTING
-  0xB01010, // CS_TIMEOUT
+  0xD02020, // CS_TIMEOUT
   0x10B0B0, // CS_IDLE
-  0xB01010, // CS_ALARM
+  0xD02020, // CS_ALARM
   0xB0B010, // CS_CHECK
   0x10B050, // CS_HOMING
   0x10B010, // CS_RUN
   0x10B060, // CS_JOG
   0xB06010, // CS_HOLD
   0xB07030, // CS_DOOR
-  0x4040A0 // CS_SLEEP
+  0x4040A0  // CS_SLEEP
 };
 
 
@@ -100,6 +102,17 @@ StateFloat stateCncFeedOverride(FST("Feed Override"), 0.0, FST("Feed rate overri
 StateFloat stateCncRapidsOverride(FST("Feed Override"), 0.0, FST("Feed rate override"), 0, &configGroupCNC);
 StateFloat stateCncSpeed(FST("Speed"), 0.0, FST("Current spindle speed"), 0, &configGroupCNC);
 StateFloat stateCncSpeedOverride(FST("Speed Override"), 0.0, FST("Spindle speed override"), 0, &configGroupCNC);
+
+CncSettingsEncoderMode cncSettingsEncoderMode = CSEM_JOG_STEP;
+typedef void (*CncEncoderCB)(int32_t steps);
+CncEncoderCB cncEncoderCB[] = {
+  nullptr,         // CSEM_NONE
+  cncIncJogStep,   // CSEM_JOG_STEP
+  cncIncJogFeed,   // CSEM_JOG_FEED
+  nullptr,         // CSEM_FEED_OVERRIDE
+  nullptr,         // CSEM_RAPIDS_OVERRIDE
+  nullptr          // CSEM_SPEED_OVERRIDE
+};
 
 CncAxis cncAxis[] = {
     CncAxis(FST("X Axis"), CNC_AXIS_X, 'X', 100.0, 1000.0, 10.0),
@@ -152,12 +165,24 @@ void _cncSetState(const char* token) {
     uiUpdateLabel(uiCncStateLabel, configCncState.getText(), -1, cncStateColor[configCncState.get()]);
 }
 
-void _parseCncResponse() {
+
+/*
+XYZABC Limit switches
+P Probe Switch
+R Reset Switch
+S Cycle start switch
+F Feed hold switch
+D Door switch
+0123 Macro switch status
+*/
+void _parseCncResponseState() {
     size_t n = 0;
     size_t i = 0;
-    typedef enum CncReadStateEnum {PS_START, PS_STATE, PS_MPOS, PS_FS, PS_OV, PS_WCO, PS_DONE } CncReadStateEnum;
+    typedef enum CncReadStateEnum {PS_START, PS_STATE, PS_MPOS, PS_FS, PS_OV, PS_WCO, PS_PN, PS_DONE } CncReadStateEnum;
     CncReadStateEnum state = PS_START;
     size_t p = 0;
+    bool gotPinStates = false;
+    int maxAxis = -1;
     char token[64];
     do {
         i = _readCncToken(cncStreamReadBuffer+n, token, sizeof(token));
@@ -169,19 +194,20 @@ void _parseCncResponse() {
             else if (!strcmp(token, FST("WCO"))) { state = PS_WCO; }
             else if (!strcmp(token, FST("FS"))) { state = PS_FS; }
             else if (!strcmp(token, FST("Ov"))) { state = PS_OV; }
+            else if (!strcmp(token, FST("Pn"))) { state = PS_PN; }
             else { DEBUG_printf(FST("Unknown CNC info token: %s\n"), token); }
         }
         else if (state == PS_STATE) { _cncSetState(token); }
         else if (state == PS_MPOS) {
             if (p < CNC_AXIS_MAX-1) { 
                 cncAxis[p].machinePos.set(atof(token));
-                cncAxis[p].showMachineCoordinates();
+                maxAxis = std::max(maxAxis, (int)p);
             }
         }
         else if (state == PS_WCO) {
             if (p < CNC_AXIS_MAX-1) { 
                 cncAxis[p].workCoordinate.set(atof(token)); 
-                cncAxis[p].showWorkCoordinates();
+                maxAxis = std::max(maxAxis, (int)p);
             }
         }
         else if (state == PS_FS) {
@@ -199,6 +225,16 @@ void _parseCncResponse() {
             else if (p == 1) { stateCncRapidsOverride.set(atof(token)); }
             else if (p == 2) { stateCncFeedOverride.set(atof(token)); }
         }
+        else if (state == PS_PN) {
+            gotPinStates = true;
+            if (!strcmp(token, cncPinStates)) { 
+                lv_label_set_text(uiCncPinLabel, token); 
+                lv_obj_set_style_text_color(uiCncPinLabel, lv_color_hex(0xFFFF20), LV_PART_MAIN | LV_STATE_DEFAULT);
+                lv_obj_set_style_bg_color(uiCncPinLabel, lv_color_hex(0x4040D0), LV_PART_MAIN | LV_STATE_DEFAULT);
+            }
+            strncpy(cncPinStates, token, sizeof(cncPinStates)-1);
+            cncPinStates[sizeof(cncPinStates)-1] = '\0';
+        }
         else { DEBUG_printf(FST("Unknown CNC state token:%s sep=%c state=%d\n"), token, sep, state); }
         if (sep == ',') { p++; }
         else { p = 0; }
@@ -206,6 +242,22 @@ void _parseCncResponse() {
         // DEBUG_print(token); DEBUG_print(" "); DEBUG_println(term);
         n += i;
     } while (i && cncStreamReadBuffer[n]);
+    if (!gotPinStates) {
+        if (cncPinStates[0] != '-') {
+            cncPinStates[0] = '-';
+            cncPinStates[1] = '\0';
+            lv_label_set_text(uiCncPinLabel, cncPinStates);
+            lv_obj_set_style_text_color(uiCncPinLabel, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_bg_color(uiCncPinLabel, lv_color_hex(0x808080), LV_PART_MAIN | LV_STATE_DEFAULT);
+        }
+    }
+    for (int a=0; a<=maxAxis; a++) { cncAxis[a].showCoordinates(); }
+
+}
+
+
+void _parseCncResponse() {
+    if (cncStreamReadBuffer[0] == '<') { _parseCncResponseState(); }
 }
 
 void _readCncStream() {
@@ -230,8 +282,50 @@ void _readCncStream() {
   }
 }
 
+void cncSetAzisZero(int axis) {
+    if (axis < 0 || axis > configAxesCount.get()) { return; }
+    DEBUG_printf(FST("Set %c Zero\n"), cncAxis[axis].letter);
+    char buffer[64];
+    sprintf(buffer, FST("G10 L20 P0 %c0\n"), cncAxis[axis].letter);    
+    cncSend(buffer);
+}
+
+void cncAxisEncoderPress() {
+    cncSetAzisZero(configCncCurrentAxis.get()-1);
+}
+
+static void _cncResetAlarm(lv_event_t * e) {
+    DEBUG_println(FST("Reset Alarm"));
+    cncSend(FST("$X\n"));
+}
+
+static void _cncSetAxisZeroEvent(lv_event_t * e) {
+    int axis = (int) lv_event_get_user_data(e);
+    cncSetAzisZero(axis);
+}
+
+
+void _showCurrentAxisSettings() {
+    int currentAxis = configCncCurrentAxis.get();
+    if (!currentAxis) { return; }
+    char buffer[32];
+    sprintf(buffer, FST("%g"), cncAxis[currentAxis-1].jogStep.get());   
+    lv_label_set_text(uiPanelSettingsJogStep.text, buffer);
+    sprintf(buffer, FST("%g"), cncAxis[currentAxis-1].jogFeed.get());   
+    lv_label_set_text(uiPanelSettingsJogFeed.text, buffer);
+}
+
 void cncInit() {
     Serial2.begin(115200, SERIAL_8N1, UART2_RXD, UART2_TXD);
+    uiHighlightAxis(configCncCurrentAxis.get() - 1);
+    uiHighlightCncSetting((int)cncSettingsEncoderMode - 1);
+
+    _showCurrentAxisSettings();
+
+    lv_obj_add_event_cb(uiCncStateLabel, _cncResetAlarm, LV_EVENT_RELEASED, nullptr);
+    for (int i=0; i<4; i++) {
+        lv_obj_add_event_cb(uiAxis[i].wZeroButton, _cncSetAxisZeroEvent, LV_EVENT_CLICKED, (void*) i);
+    }
 }
 
 void cncRun(uint32_t now) {
@@ -263,6 +357,7 @@ CncAxisEnum cncIncActiveAxis(int32_t steps) {
         configCncCurrentAxis.set(currentAxis);
         DEBUG_printf(FST("Current Axis %d\n"), currentAxis);
         uiHighlightAxis(currentAxis - 1);
+        _showCurrentAxisSettings();
     }
     return (CncAxisEnum) currentAxis;
 }
@@ -287,11 +382,35 @@ void cncIncJogStep(int32_t steps) {
     lv_label_set_text(uiPanelSettingsJogStep.text, buffer);
 }
 
+void cncIncFeed(int32_t steps) {
+    size_t currentAxis = configCncCurrentAxis.get();
+    if (!currentAxis || currentAxis > CNC_AXIS_MAX) { return; }
+    currentAxis--;
+    cncAxis[currentAxis].incFeed(steps);
+    char buffer[32];
+    sprintf(buffer, FST("%g"), cncAxis[currentAxis].feed.get());   
+    lv_label_set_text(uiPanelSettingsFeed.text, buffer);
+}
+
 void cncJogAxis(int32_t steps) {
     size_t currentAxis = configCncCurrentAxis.get();
     if (!currentAxis || currentAxis > CNC_AXIS_MAX) { return; }
     currentAxis--;
     cncAxis[currentAxis].jog(steps);
+}
+
+
+void cncIncSettingsEncoder(int32_t steps) {
+    CncEncoderCB cb = cncEncoderCB[cncSettingsEncoderMode];
+    if (cb) { cb(steps); }
+}
+
+void cncChangeSettingsEncoderMode(int32_t steps) {
+    int newMode = (((int)cncSettingsEncoderMode) + steps) % (int)CSEM_MAX;
+    if (newMode < 0) { newMode += (int)CSEM_MAX; }
+    cncSettingsEncoderMode = (CncSettingsEncoderMode)newMode;
+    DEBUG_printf(FST("New CNC Settings Mode: %d\n"), newMode);
+    uiHighlightCncSetting(newMode - 1);
 }
 
 /* ============================================== *\
@@ -315,6 +434,8 @@ float CncAxis::incFeed(int32_t steps) {
     if (tmp < 1.0) { tmp = 1.0; }
     if (tmp > 5000.0) { tmp = 5000.0; }
     feed.set(tmp);
+    if (axis == CNC_AXIS_X) { cncAxis[CNC_AXIS_Y-1].feed.set(tmp); }
+    if (axis == CNC_AXIS_Y) { cncAxis[CNC_AXIS_X-1].feed.set(tmp); }
     DEBUG_printf(FST("Axis %c feed: %g\n"), letter, tmp);
     return tmp;
 }
@@ -325,6 +446,8 @@ float CncAxis::incJogFeed(int32_t steps) {
     if (tmp < 1.0) { tmp = 1.0; }
     if (tmp > 5000.0) { tmp = 5000.0; }
     jogFeed.set(tmp);
+    if (axis == CNC_AXIS_X) { cncAxis[CNC_AXIS_Y-1].jogFeed.set(tmp); }
+    if (axis == CNC_AXIS_Y) { cncAxis[CNC_AXIS_X-1].jogFeed.set(tmp); }
     DEBUG_printf(FST("Axis %c jog feed: %g\n"), letter, tmp);
     return tmp;
 }
@@ -333,33 +456,22 @@ float CncAxis::incJogStep(int32_t steps) {
     float tmp = jogStep.get();
     if (steps > 0 ) { tmp *= 10.0; }
     else if (steps < 0 ) { tmp /= 10.0; }
-    if (tmp < 0.01) { tmp = 0.01; }
+    if (tmp < 0.001) { tmp = 0.001; }
     if (tmp > 100.0) { tmp = 100.0; }
     jogStep.set(tmp);
+    if (axis == CNC_AXIS_X) { cncAxis[CNC_AXIS_Y-1].jogStep.set(tmp); }
+    if (axis == CNC_AXIS_Y) { cncAxis[CNC_AXIS_X-1].jogStep.set(tmp); }
     DEBUG_printf(FST("Axis %c jog step: %g\n"), letter, tmp);
     return tmp;
-}
-
-void cncIncFeed(int32_t steps) {
-    size_t currentAxis = configCncCurrentAxis.get();
-    if (!currentAxis || currentAxis > CNC_AXIS_MAX) { return; }
-    currentAxis--;
-    cncAxis[currentAxis].incFeed(steps);
-    char buffer[32];
-    sprintf(buffer, FST("%g"), cncAxis[currentAxis].feed.get());   
-    lv_label_set_text(uiPanelSettingsFeed.text, buffer);
 }
 
 void CncAxis::jog(int steps) {
     cncSendCmdJog(axis, jogFeed.get(), jogStep.get() * steps);
 }
 
-void CncAxis::showWorkCoordinates() {
+void CncAxis::showCoordinates() {
     if (axis == CNC_AXIS_NONE || axis > CNC_AXIS_A ) { return; }
-    uiUpdateAxisValue(uiAxis[axis-1].work, workCoordinate.get());
-}
-
-void CncAxis::showMachineCoordinates() {
-    if (axis == CNC_AXIS_NONE || axis > CNC_AXIS_A ) { return; }
+    uiUpdateAxisValue(uiAxis[axis-1].work, machinePos.get() - workCoordinate.get() );
     uiUpdateAxisValue(uiAxis[axis-1].machine, machinePos.get());
 }
+

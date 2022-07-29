@@ -3,7 +3,7 @@
 #include "Config.h"
 
 uint32_t extended_inputs = 0;
-uint32_t old_extended_inputs = 0;
+uint32_t extended_inputs_old = 0;
 
 #ifdef INPUT_SPI_CHANNEL
 SPIClass INPUT_SPI(INPUT_SPI_CHANNEL);
@@ -18,7 +18,7 @@ void extendedInputSetup() {
 
 uint32_t getExtendedInputs() {
     digitalWrite(INPUT_LOAD_PIN, HIGH);
-    old_extended_inputs = extended_inputs;
+    extended_inputs_old = extended_inputs;
     extended_inputs = INPUT_SPI.transfer16(0);
     digitalWrite(INPUT_LOAD_PIN, LOW);  
     return extended_inputs;
