@@ -14,6 +14,9 @@ uint32_t cncTs_ = 0;
 uint32_t cncStatusCheckTs_ = 0;
 uint32_t cncStatusTs_ = 0;
 
+uint32_t _cncNextJogTs = 0;
+int _cncBufferedJogSteps = 0;
+
 char cncPinStates[32] = "-";
 
 #define CNC_STREAM_BUFFER_SIZE 256
@@ -118,9 +121,9 @@ CncAxis cncAxis[] = {
     CncAxis(FST("X Axis"), CNC_AXIS_X, 'X', 100.0, 1000.0, 10.0),
     CncAxis(FST("Y Axis"), CNC_AXIS_Y, 'Y', 100.0, 1000.0, 10.0),
     CncAxis(FST("Z Axis"), CNC_AXIS_Z, 'Z', 10.0, 100.0, 1.0),
-    CncAxis(FST("A Axis"), CNC_AXIS_A, 'C', 10.0, 100.0, 1.0),
+    CncAxis(FST("A Axis"), CNC_AXIS_A, 'A', 10.0, 100.0, 1.0),
     CncAxis(FST("B Axis"), CNC_AXIS_B, 'B', 10.0, 100.0, 1.0),
-    CncAxis(FST("C Axis"), CNC_AXIS_C, 'A', 10.0, 100.0, 1.0),
+    CncAxis(FST("C Axis"), CNC_AXIS_C, 'C', 10.0, 100.0, 1.0),
 };
 
 void cncSend(const char* text) {
@@ -291,7 +294,13 @@ void cncSetAzisZero(int axis) {
 }
 
 void cncAxisEncoderPress() {
-    cncSetAzisZero(configCncCurrentAxis.get()-1);
+    static uint32_t lastPressTs = 0;
+    uint32_t now = millis();
+    if (lastPressTs > now - 500) {
+        DEBUG_println(FST("Zero XYZ axes"));
+        cncSend(FST("G10 L20 P0 X0 Y0 Z0\n"));
+    } else { cncSetAzisZero(configCncCurrentAxis.get()-1); }
+    lastPressTs = now;
 }
 
 static void _cncResetAlarm(lv_event_t * e) {
@@ -341,9 +350,19 @@ void cncRun(uint32_t now) {
     }
   }
 
+  if (_cncBufferedJogSteps && now > (_cncNextJogTs + CNC_MAX_JOG_RATE_MS)) {
+    size_t currentAxis = configCncCurrentAxis.get();
+    if (currentAxis && currentAxis <= CNC_AXIS_MAX) { 
+        currentAxis--;
+        // DEBUG_printf(FST("Flush buffered jog steps: %d\n"), _cncBufferedJogSteps); 
+        cncAxis[currentAxis].jog(_cncBufferedJogSteps);
+    }
+    _cncNextJogTs = now + CNC_MAX_JOG_RATE_MS;       
+    _cncBufferedJogSteps = 0;
+  }
+
   if (now < cncTs_ + CNC_RUN_MS) { return; }
   cncTs_ = now;
-
 }
 
 
@@ -395,8 +414,15 @@ void cncIncFeed(int32_t steps) {
 void cncJogAxis(int32_t steps) {
     size_t currentAxis = configCncCurrentAxis.get();
     if (!currentAxis || currentAxis > CNC_AXIS_MAX) { return; }
+    uint32_t now = millis();
+    if (_cncNextJogTs > now) {
+        _cncBufferedJogSteps += steps;
+        return;
+    }
     currentAxis--;
-    cncAxis[currentAxis].jog(steps);
+    cncAxis[currentAxis].jog(steps + _cncBufferedJogSteps);
+    _cncNextJogTs = now + CNC_MAX_JOG_RATE_MS;
+    _cncBufferedJogSteps = 0;
 }
 
 

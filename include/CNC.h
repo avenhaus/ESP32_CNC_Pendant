@@ -49,5 +49,6 @@ void cncChangeSettingsEncoderMode(int32_t steps);
 \* ============================================== */
 
 #define CNC_RUN_MS 10
+#define CNC_MAX_JOG_RATE_MS 100
 
 #endif // _BATTERY_H_
