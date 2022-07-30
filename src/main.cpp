@@ -120,9 +120,17 @@ void loop() {
   if (inputSameCount == 5) { // Simple debounce
     uint32_t justPressed = (extended_inputs ^ extended_inputs_last) & ~extended_inputs;
     if (justPressed) {
-      // DEBUG_printf(FST("Pressed: %04X\n"), justPressed);
+      DEBUG_printf(FST("Pressed: %04X\n"), justPressed);
       if (justPressed & (1 << RIGHT_ENCODER1_BUTTON_BIT)) { cncAxisEncoderPress(); }
     }
+
+    float jjMode = !EX_INPUT(SLOW_BUTTON_BIT) ? 0.01 : 0.1;
+    if (!EX_INPUT(FAST_BUTTON_BIT)) { jjMode *= 10.0; }
+    if (jjMode != joyJogFeedMode.get()) {
+        DEBUG_printf(FST("JJ Feed Mode: %0.3f\n"), jjMode);
+        joyJogFeedMode.set(jjMode);
+    }
+
     extended_inputs_last = extended_inputs;
   }
 
@@ -131,12 +139,16 @@ void loop() {
     
     joyAxes[L_JOY_AXIS_X] = leftJoyX.read();
     joyAxes[L_JOY_AXIS_Y] = leftJoyY.read();
-
     joyAxes[R_JOY_AXIS_X] = rightJoyX.read();
     joyAxes[R_JOY_AXIS_Y] = rightJoyY.read();
+    
+    cncAxis[0].throttle.set(joyAxes[L_JOY_AXIS_X]);
+    cncAxis[1].throttle.set(joyAxes[L_JOY_AXIS_Y]);
+    cncAxis[2].throttle.set(joyAxes[R_JOY_AXIS_Y]);
+
     //DEBUG_printf(FST("Analog: LX %d  %.3f %.3f  LP %d  %.3f %.3f  LY %d   RX %d  RY %d  RP %d\n"), leftJoyX.raw, leftJoyX.value, leftJoyX.fvalue, leftPot1.raw, leftPot1.value, leftPot1.fvalue, leftJoyY.raw, rightJoyX.raw, rightJoyY.raw, rightPot1.raw);
     //DEBUG_printf(FST("Analog: LY %d  %.3f %.3f \n"), leftJoyY.raw, leftJoyY.value, leftJoyY.fvalue);
-    //DEBUG_printf(FST("Analog: LX %4d  %.3f | LY %4d  %.3f | LP %4d  %.3f || RX %4d  %.3f | RY %4d  %.3f | RP %4d  %.3f\n"), leftJoyX.raw, leftJoyX.fvalue, leftJoyY.raw, leftJoyY.fvalue, leftPot1.raw, leftPot1.fvalue, rightJoyX.raw, rightJoyX.fvalue, rightJoyY.raw, rightJoyY.fvalue, rightPot1.raw, rightPot1.fvalue);
+    // DEBUG_printf(FST("Analog: LX %4d  %.3f | LY %4d  %.3f || RX %4d  %.3f | RY %4d  %.3f |\n"), leftJoyX.raw, leftJoyX.fvalue, leftJoyY.raw, leftJoyY.fvalue, rightJoyX.raw, rightJoyX.fvalue, rightJoyY.raw, rightJoyY.fvalue);
 
   }
  

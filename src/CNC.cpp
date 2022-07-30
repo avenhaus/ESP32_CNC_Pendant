@@ -9,15 +9,17 @@
 // http://fluidnc.local/  192.168.0.184
 // http://grblesp.local/
 
+void parseGrblResponse(const char* line);
+
 Stream* cncStream = &Serial2;
 uint32_t cncTs_ = 0;
 uint32_t cncStatusCheckTs_ = 0;
 uint32_t cncStatusTs_ = 0;
+uint32_t _joyJogNextTs = 0;
+bool _isJoyJogging = false;
 
 uint32_t _cncNextJogTs = 0;
 int _cncBufferedJogSteps = 0;
-
-char cncPinStates[32] = "-";
 
 #define CNC_STREAM_BUFFER_SIZE 256
 char cncStreamReadBuffer[CNC_STREAM_BUFFER_SIZE];
@@ -42,11 +44,11 @@ const ConfigEnum::Option configCncConnectionTypeOptions[] PROGMEM = {
 const size_t configCncConnectionTypeOptionsSize = sizeof(configCncConnectionTypeOptions) / sizeof(ConfigEnum::Option);
 ConfigEnum configCncConnectionType(FST("Connection Type"), configCncConnectionTypeOptions, configCncConnectionTypeOptionsSize, CCT_UART, FST("None/WIFI/BT/UART/USB"), 0, &configGroupCNC);
 
-typedef enum CncConnectionStateEnum {CCS_UNKNOWN, CCS_CONNECTING, CCS_CONNECTED, CCS_TIMEOUT, CCS_ERROR } CncConnectionStateEnum;
 const StateEnum::Option stateCncConnectionStateOptions[] PROGMEM = {
   { "Unknown", CCS_UNKNOWN },
   { "Connecting", CCS_CONNECTING },
   { "Connected", CCS_CONNECTED },
+  { "Got Config", CCS_GOT_CONFIG },
   { "Timeout", CCS_TIMEOUT },
   { "Error", CCS_ERROR }
 };
@@ -66,7 +68,6 @@ const size_t configCncCurrentAxisOptionsSize = sizeof(configCncCurrentAxisOption
 ConfigEnum configCncCurrentAxis(FST("Current Axis"), configCncCurrentAxisOptions, configCncCurrentAxisOptionsSize, CNC_AXIS_X, FST("-/X/Y/Z/A/B/C"), 0, &configGroupCNC);
 const char CNC_AXIS_LETTER[] PROGMEM = "-XYZABC";
 
-typedef enum CncStateEnum {CS_UNKNOWN, CS_CONNECTING, CS_TIMEOUT, CS_IDLE, CS_ALARM, CS_CHECK, CS_HOMING, CS_RUN, CS_JOG, CS_HOLD, CS_DOOR, CS_SLEEP } CncStateEnum;
 const StateEnum::Option configCncStateOptions[] PROGMEM = {
   { "Unknown", CS_UNKNOWN },
   { "Connecting", CS_CONNECTING },
@@ -99,6 +100,10 @@ int32_t cncStateColor[] = {
   0x4040A0  // CS_SLEEP
 };
 
+ConfigFloat joyJogFeedMode(FST("JJ Mode"), 0.1, FST("Joystick Jog speed level"), 0, &configGroupCNC);
+ConfigFloat joyJogAdjust(FST("JJ Adjust"), 0.92, FST("Adjust calculate jog distance values to match reality"), 0, &configGroupCNC);
+ConfigFloat joyJogDt(FST("JJ DT"), 0.1, FST("Time interval between jog commands"), 0, &configGroupCNC);
+
 
 StateFloat stateCncFeed(FST("Feed"), 0.0, FST("Current feed rate"), 0, &configGroupCNC);
 StateFloat stateCncFeedOverride(FST("Feed Override"), 0.0, FST("Feed rate override"), 0, &configGroupCNC);
@@ -117,17 +122,22 @@ CncEncoderCB cncEncoderCB[] = {
   nullptr          // CSEM_SPEED_OVERRIDE
 };
 
-CncAxis cncAxis[] = {
-    CncAxis(FST("X Axis"), CNC_AXIS_X, 'X', 100.0, 1000.0, 10.0),
-    CncAxis(FST("Y Axis"), CNC_AXIS_Y, 'Y', 100.0, 1000.0, 10.0),
-    CncAxis(FST("Z Axis"), CNC_AXIS_Z, 'Z', 10.0, 100.0, 1.0),
-    CncAxis(FST("A Axis"), CNC_AXIS_A, 'A', 10.0, 100.0, 1.0),
-    CncAxis(FST("B Axis"), CNC_AXIS_B, 'B', 10.0, 100.0, 1.0),
-    CncAxis(FST("C Axis"), CNC_AXIS_C, 'C', 10.0, 100.0, 1.0),
+CncAxis cncAxis[CNC_MAX_AXES] = {
+    CncAxis(FST("X Axis"), CNC_AXIS_X, 'X', 100.0, 1000.0, 10.0, 2000.0, 300.0, 0.0),
+    CncAxis(FST("Y Axis"), CNC_AXIS_Y, 'Y', 100.0, 1000.0, 10.0, 2000.0, 300.0, 0.0),
+    CncAxis(FST("Z Axis"), CNC_AXIS_Z, 'Z',  10.0,  100.0,  1.0,  500.0, 100.0, 0.0),
+    CncAxis(FST("A Axis"), CNC_AXIS_A, 'A',  10.0,  100.0,  1.0,  500.0, 100.0, 0.0),
+    CncAxis(FST("B Axis"), CNC_AXIS_B, 'B',  10.0,  100.0,  1.0,  500.0, 100.0, 0.0),
+    CncAxis(FST("C Axis"), CNC_AXIS_C, 'C',  10.0,  100.0,  1.0,  500.0, 100.0, 0.0),
 };
 
+/*==========================================================*\
+ * GRBL configuration
+\*==========================================================*/
+
+
 void cncSend(const char* text) {
-    if (cncStream) { cncStream->println(text); }
+    if (cncStream) { cncStream->print(text); cncStream->write('\n'); }
     if (debugStream && cncStream != debugStream) { debugStream->println(text); }
 }
 
@@ -139,129 +149,46 @@ void cncSendCmdJog(CncAxisEnum axis, float speed, float distance) {
     return cncSend(buffer);
 }
 
-size_t _readCncToken(const char* src, char* token, size_t max) {
-    size_t n = 0;
-    while (n < max) {
-        char c = src[n];
-        if (c == 0) { break; }
-        token[n++] = c;
-        if (strchr(FST("<>|:, \n\r"), c)) { break; }
-    }
-    token[n] = '\0';
-    return n;
-}
-
-void _cncSetState(const char* token) {
-    if (!strcasecmp(token, FST("Idle"))) { configCncState.set(CS_IDLE); }
-    else if (!strcasecmp(token, FST("Alarm"))) { configCncState.set(CS_ALARM); }
-    else if (!strcasecmp(token, FST("Check"))) { configCncState.set(CS_CHECK); }
-    else if (!strcasecmp(token, FST("Homing"))) { configCncState.set(CS_HOMING); }
-    else if (!strcasecmp(token, FST("Run"))) { configCncState.set(CS_RUN); }
-    else if (!strcasecmp(token, FST("Jog"))) { configCncState.set(CS_JOG); }
-    else if (!strcasecmp(token, FST("Hold"))) { configCncState.set(CS_HOLD); }
-    else if (!strcasecmp(token, FST("Door"))) { configCncState.set(CS_DOOR); }
-    else if (!strcasecmp(token, FST("Sleep"))) { configCncState.set(CS_SLEEP); }
-    else {
-        configCncState.set(CS_UNKNOWN);
-        DEBUG_printf(FST("Unknown CNC state: %s\n"), token);
-    }
-    uiUpdateLabel(uiCncStateLabel, configCncState.getText(), -1, cncStateColor[configCncState.get()]);
-}
 
 
-/*
-XYZABC Limit switches
-P Probe Switch
-R Reset Switch
-S Cycle start switch
-F Feed hold switch
-D Door switch
-0123 Macro switch status
-*/
-void _parseCncResponseState() {
-    size_t n = 0;
-    size_t i = 0;
-    typedef enum CncReadStateEnum {PS_START, PS_STATE, PS_MPOS, PS_FS, PS_OV, PS_WCO, PS_PN, PS_DONE } CncReadStateEnum;
-    CncReadStateEnum state = PS_START;
-    size_t p = 0;
-    bool gotPinStates = false;
-    int maxAxis = -1;
-    char token[64];
-    do {
-        i = _readCncToken(cncStreamReadBuffer+n, token, sizeof(token));
-        char sep = token[i-1];
-        if (i > 1) { token[i-1] = '\0'; }
-        if (!strcmp(token, FST("<"))) { state = PS_STATE; }
-        else if (sep == ':') {
-            if (!strcmp(token, FST("MPos"))) { state = PS_MPOS; }
-            else if (!strcmp(token, FST("WCO"))) { state = PS_WCO; }
-            else if (!strcmp(token, FST("FS"))) { state = PS_FS; }
-            else if (!strcmp(token, FST("Ov"))) { state = PS_OV; }
-            else if (!strcmp(token, FST("Pn"))) { state = PS_PN; }
-            else { DEBUG_printf(FST("Unknown CNC info token: %s\n"), token); }
-        }
-        else if (state == PS_STATE) { _cncSetState(token); }
-        else if (state == PS_MPOS) {
-            if (p < CNC_AXIS_MAX-1) { 
-                cncAxis[p].machinePos.set(atof(token));
-                maxAxis = std::max(maxAxis, (int)p);
-            }
-        }
-        else if (state == PS_WCO) {
-            if (p < CNC_AXIS_MAX-1) { 
-                cncAxis[p].workCoordinate.set(atof(token)); 
-                maxAxis = std::max(maxAxis, (int)p);
-            }
-        }
-        else if (state == PS_FS) {
-            if (p == 0) { 
-                stateCncSpeed.set(atof(token)); 
-                uiUpdateSettingValue(uiPanelSettingsSpeed, stateCncSpeed.get());
-            }
-            else if (p == 1) { 
-                stateCncFeed.set(atof(token)); 
-                uiUpdateSettingValue(uiPanelSettingsFeed, stateCncFeed.get());
-            }
-        }
-        else if (state == PS_OV) {
-            if (p == 0) { stateCncSpeedOverride.set(atof(token)); }
-            else if (p == 1) { stateCncRapidsOverride.set(atof(token)); }
-            else if (p == 2) { stateCncFeedOverride.set(atof(token)); }
-        }
-        else if (state == PS_PN) {
-            gotPinStates = true;
-            if (!strcmp(token, cncPinStates)) { 
-                lv_label_set_text(uiCncPinLabel, token); 
-                lv_obj_set_style_text_color(uiCncPinLabel, lv_color_hex(0xFFFF20), LV_PART_MAIN | LV_STATE_DEFAULT);
-                lv_obj_set_style_bg_color(uiCncPinLabel, lv_color_hex(0x4040D0), LV_PART_MAIN | LV_STATE_DEFAULT);
-            }
-            strncpy(cncPinStates, token, sizeof(cncPinStates)-1);
-            cncPinStates[sizeof(cncPinStates)-1] = '\0';
-        }
-        else { DEBUG_printf(FST("Unknown CNC state token:%s sep=%c state=%d\n"), token, sep, state); }
-        if (sep == ',') { p++; }
-        else { p = 0; }
+/*==========================================================*\
+ * Send jog commands to GRBL controller
+\*==========================================================*/
 
-        // DEBUG_print(token); DEBUG_print(" "); DEBUG_println(term);
-        n += i;
-    } while (i && cncStreamReadBuffer[n]);
-    if (!gotPinStates) {
-        if (cncPinStates[0] != '-') {
-            cncPinStates[0] = '-';
-            cncPinStates[1] = '\0';
-            lv_label_set_text(uiCncPinLabel, cncPinStates);
-            lv_obj_set_style_text_color(uiCncPinLabel, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_bg_color(uiCncPinLabel, lv_color_hex(0x808080), LV_PART_MAIN | LV_STATE_DEFAULT);
+bool _cncJoyJog() {
+    char buffer[64];
+    buffer[0] = 0;
+    float d[CNC_MAX_AXES];
+    float total_feed = 0.0;
+    for (size_t a=0; a<CNC_MAX_AXES; a++) {
+        d[a] = 0.0;
+        float throttle = cncAxis[a].throttle.get();
+        if (abs(throttle) > 0.002) {
+            float feed = abs(throttle) * cncAxis[a].maxFeed.get() * joyJogFeedMode.get();
+            d[a] = feed * joyJogDt.get() / 60.0 * joyJogAdjust.get();
+            if (throttle < 0) { d[a] = -d[a]; }
+            if (feed) { total_feed = sqrt((total_feed * total_feed) + (feed * feed)); }
         }
     }
-    for (int a=0; a<=maxAxis; a++) { cncAxis[a].showCoordinates(); }
-
+    if (total_feed) {
+        size_t n = 0;
+        if (total_feed > 1000.0) { n = sprintf(buffer, FST("$J=G91 G21 F%d"), (int) round(total_feed)); }
+        else { n = sprintf(buffer, FST("$J=G91 G21 F%0.4g"), total_feed); }    
+        for (size_t a=0; a<CNC_MAX_AXES; a++) {
+            if (d[a]) { n += sprintf(buffer+n, FST(" %c%0.4g"), cncAxis[a].letter, d[a]); }
+        }
+        buffer[n] = '\0';
+        cncSend(buffer);
+        _isJoyJogging = true;
+    } else if (_isJoyJogging) {
+        buffer[0] = 0x85;  // Abort Jog command
+        buffer[2] = 0;
+        cncSend(buffer);
+        _isJoyJogging = false;
+    }
+    return total_feed;
 }
 
-
-void _parseCncResponse() {
-    if (cncStreamReadBuffer[0] == '<') { _parseCncResponseState(); }
-}
 
 void _readCncStream() {
   if (!cncStream) { return; }
@@ -274,7 +201,7 @@ void _readCncStream() {
             DEBUG_print(FST("CNC: "));
             DEBUG_println(cncStreamReadBuffer);
             cncStatusTs_ = millis();
-            _parseCncResponse();
+            parseGrblResponse(cncStreamReadBuffer);
         }
     } else {
         cncStreamReadBuffer[cncStreamReadBufferIndex++] = c;
@@ -289,7 +216,7 @@ void cncSetAzisZero(int axis) {
     if (axis < 0 || axis > configAxesCount.get()) { return; }
     DEBUG_printf(FST("Set %c Zero\n"), cncAxis[axis].letter);
     char buffer[64];
-    sprintf(buffer, FST("G10 L20 P0 %c0\n"), cncAxis[axis].letter);    
+    sprintf(buffer, FST("G10 L20 P0 %c0"), cncAxis[axis].letter);    
     cncSend(buffer);
 }
 
@@ -298,14 +225,14 @@ void cncAxisEncoderPress() {
     uint32_t now = millis();
     if (lastPressTs > now - 500) {
         DEBUG_println(FST("Zero XYZ axes"));
-        cncSend(FST("G10 L20 P0 X0 Y0 Z0\n"));
+        cncSend(FST("G10 L20 P0 X0 Y0 Z0"));
     } else { cncSetAzisZero(configCncCurrentAxis.get()-1); }
     lastPressTs = now;
 }
 
 static void _cncResetAlarm(lv_event_t * e) {
     DEBUG_println(FST("Reset Alarm"));
-    cncSend(FST("$X\n"));
+    cncSend(FST("$X"));
 }
 
 static void _cncSetAxisZeroEvent(lv_event_t * e) {
@@ -335,19 +262,38 @@ void cncInit() {
     for (int i=0; i<4; i++) {
         lv_obj_add_event_cb(uiAxis[i].wZeroButton, _cncSetAxisZeroEvent, LV_EVENT_CLICKED, (void*) i);
     }
+
+    stateCncConnectionState.set(CCS_UNKNOWN);
+    _joyJogNextTs = millis() + joyJogDt.get() * 1000;
 }
 
 void cncRun(uint32_t now) {
-  if (now == 0) { now = millis(); }
+    if (now == 0) { now = millis(); }
 
-  if (cncStream) {
-    _readCncStream();
-    int i = configCheckStatusInterval.get();
-    if (i > 0 && now >= cncStatusCheckTs_ + i) {
-        cncStatusCheckTs_ = now;
-        cncStream->write('?');
-        // DEBUG_println(FST("Check Status"));
-    }
+    if (cncStream) {
+        _readCncStream();
+
+        static uint32_t _getConfigRetryTs = 0;
+        if (stateCncConnectionState.get() == CCS_UNKNOWN || (stateCncConnectionState.get() == CCS_CONNECTING && now > _getConfigRetryTs)) {
+            _joyJogNextTs = now + joyJogDt.get() * 1000;
+            cncSend(FST("$$")); // Read config like max feed rates 
+            stateCncConnectionState.set(CCS_CONNECTING);
+            _getConfigRetryTs = now + 2000; // Retry every 2 sec
+        }
+
+        if (stateCncConnectionState.get() == CCS_CONNECTED) {
+            if (now >= _joyJogNextTs) {
+                _cncJoyJog();
+                _joyJogNextTs += joyJogDt.get() * 1000;
+            }
+
+            int i = configCheckStatusInterval.get();
+            if (i > 0 && now >= cncStatusCheckTs_ + i) {
+                cncStatusCheckTs_ = now;
+                cncStream->write('?');
+                // DEBUG_println(FST("Check Status"));
+            }
+        }
   }
 
   if (_cncBufferedJogSteps && now > (_cncNextJogTs + CNC_MAX_JOG_RATE_MS)) {
@@ -443,13 +389,17 @@ void cncChangeSettingsEncoderMode(int32_t steps) {
  * Axis
 \* ============================================== */
 
-CncAxis::CncAxis(const char* groupName, CncAxisEnum axis_, char letter_, float defaultFeed, float defaultJogFeed, float defaultJogStep) :
+CncAxis::CncAxis(const char* groupName, CncAxisEnum axis_, char letter_, float defaultFeed, float defaultJogFeed, float defaultJogStep, float defaultMaxFeed, float defaultMaxPos, float defaultMinPos) :
     axis(axis_),
     letter(letter_),
     configGroup(groupName, &configGroupCNC), 
     feed(FST("Feed Rate"), defaultFeed, FST("Current feed rate"), 0, &configGroup),
     jogFeed(FST("Jog Feed"), defaultJogFeed, FST("Current jog feed rate"), 0, &configGroup),
     jogStep(FST("Jog Step"), defaultJogStep, FST("Current jog step distance"), 0, &configGroup),
+    maxFeed(FST("Feed Max"), defaultMaxFeed, FST("Maximum feed rate for the axis"), 0, &configGroup),
+    maxPos(FST("Max Pos"), defaultMaxPos, FST("Maximum axis machine coordinate"), 0, &configGroup),
+    minPos(FST("Min Pos"), defaultMinPos, FST("Minimum axis machine coordinate"), 0, &configGroup),
+    throttle(FST("Throttle"), 0.0, FST("Analog jog throttle (joystick"), 0, &configGroup),
     machinePos(FST("Machine Pos"), 0.0, FST("Current axis machine postion"), 0, &configGroup),
     workCoordinate(FST("Work Coord"), 0.0, FST("Current axis work coordiante"), 0, &configGroup)
     {}
