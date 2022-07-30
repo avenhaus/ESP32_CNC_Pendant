@@ -7,11 +7,18 @@
 \* ============================================== */
 
 lv_obj_t* uiPanelSettings;
-UiSetting uiPanelSettingsFeed;
-UiSetting uiPanelSettingsSpeed;
 UiSetting uiPanelSettingsJogFeed;
 UiSetting uiPanelSettingsJogStep;
+UiSetting uiPanelSettingsSpeedOverride;
+UiSetting uiPanelSettingsRapidsOverride;
+UiSetting uiPanelSettingsFeedOverride;
 
+lv_obj_t* uiPanelSettings2;
+UiSetting uiPanelSettingsFeed;
+UiSetting uiPanelSettingsSpeed;
+
+lv_obj_t * uiCncStateLabel;
+lv_obj_t * uiCncPinLabel;
 
 const UiSetting* uiSetting [] = {
     &uiPanelSettingsJogStep,
@@ -33,7 +40,7 @@ static void _uiJogSettingUpdated(float value, bool isCancelled, void* cbData) {
     lv_label_set_text(uia->text, buffer);
 }
 
-static void _uiGetNewJogSetting(lv_event_t* e) {
+static void _uiGetNewSetting(lv_event_t* e) {
     lv_event_code_t event = lv_event_get_code(e);
     if(event != LV_EVENT_RELEASED) { return; }
     lv_obj_t* ta = lv_event_get_target(e);
@@ -70,12 +77,45 @@ void uiCreatePanelSetting(UiSetting& uiSetting, lv_obj_t* parent, const char* la
 }
 
 lv_obj_t* uiCreatePanelSettings(lv_obj_t* parent, lv_coord_t x, lv_coord_t y) {
-    uiPanelSettings = uiCreatePanel(parent, &lv_font_montserrat_22, x, y, 150);
+    uiPanelSettings = uiCreatePanel(parent, &lv_font_montserrat_22, x, y, 180);
 
-    uiCreatePanelSetting(uiPanelSettingsFeed, uiPanelSettings, FST("Feed"), FST("%g"), 0, _uiGetNewJogSetting);
-    uiCreatePanelSetting(uiPanelSettingsSpeed, uiPanelSettings, FST("Speed"), FST("%g"), 24, _uiGetNewJogSetting);
-    uiCreatePanelSetting(uiPanelSettingsJogFeed, uiPanelSettings, FST("JFeed"), FST("%g"), 48, _uiGetNewJogSetting);
-    uiCreatePanelSetting(uiPanelSettingsJogStep, uiPanelSettings, FST("JStep"), FST("%g"), 72, _uiGetNewJogSetting);
+    uiCreatePanelSetting(uiPanelSettingsFeed, uiPanelSettings, FST("Feed"), FST("%g"), 0, _uiGetNewSetting);
+    uiCreatePanelSetting(uiPanelSettingsSpeed, uiPanelSettings, FST("Speed"), FST("%g"), 24, _uiGetNewSetting);
+    uiCreatePanelSetting(uiPanelSettingsFeedOverride, uiPanelSettings, FST("FeedOv"), FST("%g"), 48, _uiGetNewSetting);
+    uiCreatePanelSetting(uiPanelSettingsRapidsOverride, uiPanelSettings, FST("RapidOv"), FST("%g"), 72, _uiGetNewSetting);
+    uiCreatePanelSetting(uiPanelSettingsSpeedOverride, uiPanelSettings, FST("SpeedOv"), FST("%g"), 96, _uiGetNewSetting);
+    
+    int ps = 150;
+    uiPanelSettings2 = uiCreatePanel(parent, &lv_font_montserrat_22, x+190, y, ps);
+    uiCreatePanelSetting(uiPanelSettingsJogFeed, uiPanelSettings2, FST("JFeed"), FST("%g"), 0, _uiGetNewSetting);
+    uiCreatePanelSetting(uiPanelSettingsJogStep, uiPanelSettings2, FST("JStep"), FST("%g"), 24, _uiGetNewSetting);
+
+    uiCncStateLabel = lv_label_create(uiPanelSettings2);
+    lv_obj_set_size(uiCncStateLabel, ps - 10, LV_SIZE_CONTENT);
+    lv_obj_set_pos(uiCncStateLabel, 0, 51);
+    lv_obj_set_align(uiCncStateLabel, LV_ALIGN_TOP_LEFT);
+    lv_label_set_text(uiCncStateLabel, FST("???"));
+    lv_obj_set_style_text_align(uiCncStateLabel, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(uiCncStateLabel, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(uiCncStateLabel, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(uiCncStateLabel, lv_color_hex(0x808080), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(uiCncStateLabel, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(uiCncStateLabel, &lv_font_montserrat_22, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_add_flag(uiCncStateLabel, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_bg_color(uiCncStateLabel, lv_color_hex(0x505050), LV_PART_MAIN | LV_STATE_PRESSED);
+
+    uiCncPinLabel = lv_label_create(uiPanelSettings2);
+    lv_obj_set_size(uiCncPinLabel, ps - 10, LV_SIZE_CONTENT);
+    lv_obj_set_pos(uiCncPinLabel, 0, 78);
+    lv_obj_set_align(uiCncPinLabel, LV_ALIGN_TOP_LEFT);
+    lv_label_set_text(uiCncPinLabel, FST("-"));
+    lv_obj_set_style_text_align(uiCncPinLabel, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(uiCncPinLabel, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(uiCncPinLabel, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(uiCncPinLabel, lv_color_hex(0x808080), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(uiCncPinLabel, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(uiCncPinLabel, &lv_font_montserrat_22, LV_PART_MAIN | LV_STATE_DEFAULT);
     
     return uiPanelSettings;
 }

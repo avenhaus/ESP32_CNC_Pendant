@@ -12,11 +12,16 @@
 void parseGrblResponse(const char* line);
 
 Stream* cncStream = &Serial2;
-uint32_t cncTs_ = 0;
-uint32_t cncStatusCheckTs_ = 0;
-uint32_t cncStatusTs_ = 0;
+uint32_t _cncCmdSentTs = 0;
+uint32_t _cncCmdResponseTs = 0;
+uint32_t _cncStatusCheckTs = 0;
+uint32_t _cncStatusResponseTs = 0;
 uint32_t _joyJogNextTs = 0;
 bool _isJoyJogging = false;
+
+uint32_t cncCmdCnt = 0;
+uint32_t cncCmdOkCnt = 0;
+uint32_t cncCmdErrorCnt = 0;
 
 uint32_t _cncNextJogTs = 0;
 int _cncBufferedJogSteps = 0;
@@ -32,6 +37,9 @@ ConfigUInt32 configUart2Speed(FST("Baud"), 115200, FST("UART2 Speed"), 0, &confi
 ConfigUInt32 configCheckStatusInterval(FST("Status Check"), 1000, FST("Check CNC status interval"), 0, &configGroupCNC);
 ConfigStr configCncHost(FST("Host"), 32, CNC_HOST, FST("CNC"), 0, &configGroupCNC);
 ConfigUInt8 configAxesCount(FST("Axes"), 4, FST("Number of axes"), 0, &configGroupCNC);
+
+ConfigUInt32 configShowMessageToastMs(FST("Message Toast ms"), 5000, FST("How long a message is displayed on screen."), 0, &configGroupCNC);
+ConfigUInt32 configShowErrorToastMs(FST("Error Toast ms"), 5000, FST("How long an error message is displayed on screen."), 0, &configGroupCNC);
 
 typedef enum CncConnectionTypeEnum {CCT_NONE, CCT_WIFI, CCT_BT, CCT_UART, CCT_USB } CncConnectionTypeEnum;
 const ConfigEnum::Option configCncConnectionTypeOptions[] PROGMEM = {
@@ -123,12 +131,12 @@ CncEncoderCB cncEncoderCB[] = {
 };
 
 CncAxis cncAxis[CNC_MAX_AXES] = {
-    CncAxis(FST("X Axis"), CNC_AXIS_X, 'X', 100.0, 1000.0, 10.0, 2000.0, 300.0, 0.0),
-    CncAxis(FST("Y Axis"), CNC_AXIS_Y, 'Y', 100.0, 1000.0, 10.0, 2000.0, 300.0, 0.0),
-    CncAxis(FST("Z Axis"), CNC_AXIS_Z, 'Z',  10.0,  100.0,  1.0,  500.0, 100.0, 0.0),
-    CncAxis(FST("A Axis"), CNC_AXIS_A, 'A',  10.0,  100.0,  1.0,  500.0, 100.0, 0.0),
-    CncAxis(FST("B Axis"), CNC_AXIS_B, 'B',  10.0,  100.0,  1.0,  500.0, 100.0, 0.0),
-    CncAxis(FST("C Axis"), CNC_AXIS_C, 'C',  10.0,  100.0,  1.0,  500.0, 100.0, 0.0),
+    CncAxis(FST("X Axis"), CNC_AXIS_X, 'X', 100.0, 1000.0, 10.0, 2000.0, 300.0),
+    CncAxis(FST("Y Axis"), CNC_AXIS_Y, 'Y', 100.0, 1000.0, 10.0, 2000.0, 300.0),
+    CncAxis(FST("Z Axis"), CNC_AXIS_Z, 'Z',  10.0,  100.0,  1.0,  500.0, 100.0),
+    CncAxis(FST("A Axis"), CNC_AXIS_A, 'A',  10.0,  100.0,  1.0,  500.0, 100.0),
+    CncAxis(FST("B Axis"), CNC_AXIS_B, 'B',  10.0,  100.0,  1.0,  500.0, 100.0),
+    CncAxis(FST("C Axis"), CNC_AXIS_C, 'C',  10.0,  100.0,  1.0,  500.0, 100.0),
 };
 
 /*==========================================================*\
@@ -137,7 +145,11 @@ CncAxis cncAxis[CNC_MAX_AXES] = {
 
 
 void cncSend(const char* text) {
-    if (cncStream) { cncStream->print(text); cncStream->write('\n'); }
+    if (cncStream) { 
+        cncStream->print(text); 
+        cncStream->write('\n'); 
+        cncCmdCnt++; 
+    }
     if (debugStream && cncStream != debugStream) { debugStream->println(text); }
 }
 
@@ -200,8 +212,10 @@ void _readCncStream() {
             cncStreamReadBufferIndex = 0;
             DEBUG_print(FST("CNC: "));
             DEBUG_println(cncStreamReadBuffer);
-            cncStatusTs_ = millis();
-            parseGrblResponse(cncStreamReadBuffer);
+            if (!strcasecmp(FST("ok"), cncStreamReadBuffer)) {
+                _cncCmdResponseTs = millis();
+                if (cncCmdOkCnt + cncCmdErrorCnt < cncCmdCnt) { cncCmdOkCnt++; }            
+            } else { parseGrblResponse(cncStreamReadBuffer); }
         }
     } else {
         cncStreamReadBuffer[cncStreamReadBufferIndex++] = c;
@@ -288,8 +302,8 @@ void cncRun(uint32_t now) {
             }
 
             int i = configCheckStatusInterval.get();
-            if (i > 0 && now >= cncStatusCheckTs_ + i) {
-                cncStatusCheckTs_ = now;
+            if (i > 0 && now >= _cncStatusCheckTs + i) {
+                _cncStatusCheckTs = now;
                 cncStream->write('?');
                 // DEBUG_println(FST("Check Status"));
             }
@@ -307,8 +321,6 @@ void cncRun(uint32_t now) {
     _cncBufferedJogSteps = 0;
   }
 
-  if (now < cncTs_ + CNC_RUN_MS) { return; }
-  cncTs_ = now;
 }
 
 
@@ -389,7 +401,7 @@ void cncChangeSettingsEncoderMode(int32_t steps) {
  * Axis
 \* ============================================== */
 
-CncAxis::CncAxis(const char* groupName, CncAxisEnum axis_, char letter_, float defaultFeed, float defaultJogFeed, float defaultJogStep, float defaultMaxFeed, float defaultMaxPos, float defaultMinPos) :
+CncAxis::CncAxis(const char* groupName, CncAxisEnum axis_, char letter_, float defaultFeed, float defaultJogFeed, float defaultJogStep, float defaultMaxFeed, float defaultMaxTravel) :
     axis(axis_),
     letter(letter_),
     configGroup(groupName, &configGroupCNC), 
@@ -397,8 +409,7 @@ CncAxis::CncAxis(const char* groupName, CncAxisEnum axis_, char letter_, float d
     jogFeed(FST("Jog Feed"), defaultJogFeed, FST("Current jog feed rate"), 0, &configGroup),
     jogStep(FST("Jog Step"), defaultJogStep, FST("Current jog step distance"), 0, &configGroup),
     maxFeed(FST("Feed Max"), defaultMaxFeed, FST("Maximum feed rate for the axis"), 0, &configGroup),
-    maxPos(FST("Max Pos"), defaultMaxPos, FST("Maximum axis machine coordinate"), 0, &configGroup),
-    minPos(FST("Min Pos"), defaultMinPos, FST("Minimum axis machine coordinate"), 0, &configGroup),
+    maxTravel(FST("Max Pos"), defaultMaxTravel, FST("Maximum axis machine coordinate"), 0, &configGroup),
     throttle(FST("Throttle"), 0.0, FST("Analog jog throttle (joystick"), 0, &configGroup),
     machinePos(FST("Machine Pos"), 0.0, FST("Current axis machine postion"), 0, &configGroup),
     workCoordinate(FST("Work Coord"), 0.0, FST("Current axis work coordiante"), 0, &configGroup)

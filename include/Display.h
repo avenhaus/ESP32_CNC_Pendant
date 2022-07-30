@@ -5,7 +5,7 @@
 #define DISPLAY_H
 
 void displaySetup();
-void guiRun();
+void guiRun(uint32_t now);
 void mainScreen();
 bool setDisplayBrightness(uint8_t value, void* cbData=nullptr);
 void displayBootScreen();

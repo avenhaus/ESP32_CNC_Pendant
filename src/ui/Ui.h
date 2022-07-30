@@ -5,6 +5,7 @@
 #include "VUEF.h"
 
 void uiInit(void);
+void uiRun(uint32_t now);
 
 // Status Bar
 lv_obj_t* uiCreateStatusBar(lv_obj_t* parent);
@@ -56,15 +57,27 @@ extern UiSetting uiPanelSettingsSpeed;
 extern UiSetting uiPanelSettingsJogFeed;
 extern UiSetting uiPanelSettingsJogStep;
 
+extern UiSetting uiPanelSettingsSpeedOverride;
+extern UiSetting uiPanelSettingsRapidsOverride;
+extern UiSetting uiPanelSettingsFeedOverride;
 
 extern lv_obj_t* uiCncStateLabel;
 extern lv_obj_t* uiCncPinLabel;
+
+extern lv_obj_t * uiMessageToast;
+extern lv_obj_t * uiErrorToast;
 
 
 // Keyboard
 typedef void (*UiKeyboardDoneCB)(float value, bool isCancelled, void* cbData);
 lv_obj_t* uiCreateKeyboard(lv_obj_t* parent);
 void uiShowKeyboard(const char* description=nullptr, const char* text=nullptr, const char* placeholder=nullptr, UiKeyboardDoneCB cb=nullptr, void* cbData=nullptr);
+
+// Toast
+void showMessageToast(const char* text, uint32_t timeMs=0);
+void hideMessageToast();
+void showErrorToast(const char* text, uint32_t timeMs=0);
+void hideErrorToast();
 
 
 /* ============================================== *\

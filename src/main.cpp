@@ -99,7 +99,7 @@ void loop() {
   vuefRun(now);
   cncRun(now);
   #if ENABLE_DISPLAY
-  guiRun();
+  guiRun(now);
   #endif
 
   int steps = encoderMain.getChagne();
@@ -141,7 +141,7 @@ void loop() {
     joyAxes[L_JOY_AXIS_Y] = leftJoyY.read();
     joyAxes[R_JOY_AXIS_X] = rightJoyX.read();
     joyAxes[R_JOY_AXIS_Y] = rightJoyY.read();
-    
+
     cncAxis[0].throttle.set(joyAxes[L_JOY_AXIS_X]);
     cncAxis[1].throttle.set(joyAxes[L_JOY_AXIS_Y]);
     cncAxis[2].throttle.set(joyAxes[R_JOY_AXIS_Y]);

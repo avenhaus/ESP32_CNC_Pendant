@@ -7,6 +7,9 @@
 #include "UiHelper.h"
 
 char cncPinStates[32] = "-";
+extern uint32_t _cncCmdResponseTs;
+extern uint32_t _cncStatusResponseTs;
+int getErrorCode = 0;
 
 size_t _readCncToken(const char* src, char* token, size_t max) {
     size_t n = 0;
@@ -57,6 +60,9 @@ void _grblHandleConfigLine(const char* line) {
       if (par >= 110 && par <= 110 + CNC_MAX_AXES) {
         cncAxis[par-110].maxFeed.set(val);
       }
+      if (par >= 120 && par <= 120 + CNC_MAX_AXES) {
+        cncAxis[par-120].maxTravel.set(val);
+      }
     }
   }
 }
@@ -75,7 +81,8 @@ F Feed hold switch
 D Door switch
 0123 Macro switch status
 */
-void _grblHandleStateLine(const char* line) {
+void _grblHandleStatusLine(const char* line) {
+    _cncStatusResponseTs = millis();
     size_t n = 0;
     size_t i = 0;
     typedef enum CncReadStateEnum {PS_START, PS_STATE, PS_MPOS, PS_FS, PS_OV, PS_WCO, PS_PN, PS_DONE } CncReadStateEnum;
@@ -121,9 +128,18 @@ void _grblHandleStateLine(const char* line) {
             }
         }
         else if (state == PS_OV) {
-            if (p == 0) { stateCncSpeedOverride.set(atof(token)); }
-            else if (p == 1) { stateCncRapidsOverride.set(atof(token)); }
-            else if (p == 2) { stateCncFeedOverride.set(atof(token)); }
+            if (p == 0) { 
+                stateCncSpeedOverride.set(atof(token)); 
+                uiUpdateSettingValue(uiPanelSettingsSpeedOverride, stateCncSpeedOverride.get());
+            }
+            else if (p == 1) { 
+                stateCncRapidsOverride.set(atof(token)); 
+                uiUpdateSettingValue(uiPanelSettingsRapidsOverride, stateCncRapidsOverride.get());
+            }
+            else if (p == 2) { 
+                stateCncFeedOverride.set(atof(token)); 
+                uiUpdateSettingValue(uiPanelSettingsFeedOverride, stateCncFeedOverride.get());
+            }
         }
         else if (state == PS_PN) {
             gotPinStates = true;
@@ -155,7 +171,39 @@ void _grblHandleStateLine(const char* line) {
 
 }
 
+void _grblHandleMessageLine(const char* line) {
+    showMessageToast(line, configShowMessageToastMs.get());
+}
+
+void _grblHandleErrorLine(const char* line) {
+    _cncCmdResponseTs = millis();
+    showErrorToast(line, configShowErrorToastMs.get());
+    getErrorCode=atoi(line);
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer)-1, FST("$E=%s"), line);
+    cncSend(buffer);
+}
+
 void parseGrblResponse(const char* line) {
-    if (line[0] == '<') { _grblHandleStateLine(line); }
+    if (line[0] == '<') { _grblHandleStatusLine(line); }
     else if (line[0] == '$') { _grblHandleConfigLine(line); }
+    else if (line[0] == '[') { _grblHandleMessageLine(line); }
+    else if (getErrorCode && line[0]>='0' && line[0]<='9') {
+        /*
+        char token[64];
+        size_t n = _readCncToken(line, token, sizeof(token));
+        n = _readCncToken(line+n, token, sizeof(token));
+        */
+        showErrorToast(line, configShowErrorToastMs.get());
+        getErrorCode = 0;
+    }
+    else {
+        char token[32];
+        size_t n = _readCncToken(line, token, sizeof(token));
+        if (!strcasecmp(token, FST("error:"))) {
+            if (cncCmdOkCnt + cncCmdErrorCnt < cncCmdCnt) { cncCmdErrorCnt++; }
+            _readCncToken(line+n, token, sizeof(token));
+            _grblHandleErrorLine(token);
+        }
+    }
 }

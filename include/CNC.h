@@ -13,7 +13,7 @@ typedef enum CncAxisEnum {CNC_AXIS_NONE, CNC_AXIS_X, CNC_AXIS_Y, CNC_AXIS_Z, CNC
 
 class CncAxis {
 public:
-    CncAxis(const char* groupName, CncAxisEnum axis, char letter, float defaultFeed, float defaultJogFeed, float defaultJogStep, float defaultMaxFeed, float defaultMaxPos, float defaultMinPos);
+    CncAxis(const char* groupName, CncAxisEnum axis, char letter, float defaultFeed, float defaultJogFeed, float defaultJogStep, float defaultMaxFeed, float defaultMaxTravel);
     void jog(int steps);
     float incFeed(int32_t steps);
     float incJogFeed(int32_t steps);
@@ -27,8 +27,7 @@ public:
     ConfigFloat jogFeed;
     ConfigFloat jogStep;
     ConfigFloat maxFeed;
-    ConfigFloat maxPos;
-    ConfigFloat minPos;
+    ConfigFloat maxTravel;
     ConfigFloat throttle;
 
     StateFloat machinePos;
@@ -37,6 +36,7 @@ public:
 
 void cncInit();
 void cncRun(uint32_t now=0);
+void cncSend(const char* text);
 CncAxisEnum cncIncActiveAxis(int32_t steps);
 void cncIncFeed(int32_t steps);
 void cncIncJogFeed(int32_t steps);
@@ -63,9 +63,16 @@ extern StateFloat stateCncRapidsOverride;
 extern StateFloat stateCncSpeed;
 extern StateFloat stateCncSpeedOverride;
 
+extern ConfigUInt32 configShowMessageToastMs;
+extern ConfigUInt32 configShowErrorToastMs;
+
 extern CncAxis cncAxis[CNC_MAX_AXES];
 
 extern ConfigFloat joyJogFeedMode;
+
+extern uint32_t cncCmdCnt;
+extern uint32_t cncCmdOkCnt;
+extern uint32_t cncCmdErrorCnt;
 
 /* ============================================== *\
  * Constants

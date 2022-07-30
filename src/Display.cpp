@@ -304,8 +304,9 @@ void mainScreen() {
   lv_label_set_text(uiStatusBarIpAddr, buffer);
 }
 
-void guiRun() {
+void guiRun(uint32_t now) {
    lv_timer_handler();
+   uiRun(now);
 }
 
 #endif // ENABLE_DISPLAY
