@@ -11,6 +11,11 @@ extern uint32_t _cncCmdResponseTs;
 extern uint32_t _cncStatusResponseTs;
 int getErrorCode = 0;
 
+extern uint32_t _cncGetConfigTs;
+extern uint32_t _cncGetConfigState;
+extern uint32_t _cncGotConfig;
+
+
 size_t _readCncToken(const char* src, char* token, size_t max) {
     size_t n = 0;
     while (n < max) {
@@ -55,13 +60,15 @@ void _grblHandleConfigLine(const char* line) {
       if (line[n] == '=') { n++; }
       float val = atof(line+n);
       DEBUG_printf(FST("GRBL-parameter: %d : %f\n"), par, val);
-      stateCncConnectionState.set(CCS_GOT_CONFIG);
-      stateCncConnectionState.set(CCS_CONNECTED);
       if (par >= 110 && par <= 110 + CNC_MAX_AXES) {
         cncAxis[par-110].maxFeed.set(val);
       }
-      if (par >= 120 && par <= 120 + CNC_MAX_AXES) {
+      else if (par >= 120 && par <= 120 + CNC_MAX_AXES) {
         cncAxis[par-120].maxTravel.set(val);
+      }
+      if (par == 120) {
+        cncSetCncMachineType(CMT_GRBL);
+        _cncGotConfig = 1;
       }
     }
   }
@@ -201,7 +208,8 @@ void parseGrblResponse(const char* line) {
         char token[32];
         size_t n = _readCncToken(line, token, sizeof(token));
         if (!strcasecmp(token, FST("error:"))) {
-            if (cncCmdOkCnt + cncCmdErrorCnt < cncCmdCnt) { cncCmdErrorCnt++; }
+            if (cncResponseCnt < cncCmdCnt) { cncResponseCnt++; }
+            cncResponseError = true;
             _readCncToken(line+n, token, sizeof(token));
             _grblHandleErrorLine(token);
         }

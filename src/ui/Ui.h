@@ -3,6 +3,7 @@
 
 #include "lvgl.h"
 #include "VUEF.h"
+#include "Config.h"
 
 void uiInit(void);
 void uiRun(uint32_t now);
@@ -84,8 +85,13 @@ void hideErrorToast();
  * Constants
 \* ============================================== */
 
+#if USE_IPS_DISPLAY
+#define UI_COLOR_PANEL_BG 0x3030A0
+#define UI_COLOR_PANEL_BG_GRADIENT 0x101060
+#else
 #define UI_COLOR_PANEL_BG 0x303080
 #define UI_COLOR_PANEL_BG_GRADIENT 0x101030
+#endif
 #define UI_COLOR_PANEL_BORDER 0x13DD33
 #define UI_COLOR_PANEL_SELECT 0x207820
 #define UI_COLOR_KEYBOARD_BORDER 0x7E7AE1

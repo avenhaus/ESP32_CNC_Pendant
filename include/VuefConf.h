@@ -48,4 +48,6 @@
 #define NTP_SERVER_2 "13.65.245.138"
 
 
+#define CONFIG_BUFFER_SIZE 2048
+
 #endif // _VUEF_CONF_H_

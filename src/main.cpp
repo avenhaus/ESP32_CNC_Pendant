@@ -26,8 +26,12 @@ Joystick leftJoyX(L_JOY_X_PIN);
 Joystick leftJoyY(L_JOY_Y_PIN);
 Joystick rightJoyX(R_JOY_X_PIN);
 Joystick rightJoyY(R_JOY_Y_PIN);
+float joyAxes[JOY_AXIS_SIZE] = {0.0};
 
-float joyAxes[JOY_AXIS_SIZE] = {0};
+#if POTI_PIN >= 0 
+Potentiometer poti(POTI_PIN);
+float analogIn = 0.0;
+#endif
 
 uint32_t analogReadTs = 0;
 
@@ -141,6 +145,9 @@ void loop() {
     joyAxes[L_JOY_AXIS_Y] = leftJoyY.read();
     joyAxes[R_JOY_AXIS_X] = rightJoyX.read();
     joyAxes[R_JOY_AXIS_Y] = rightJoyY.read();
+#if POTI_PIN >= 0 
+    analogIn = poti.read();
+#endif
 
     cncAxis[0].throttle.set(joyAxes[L_JOY_AXIS_X]);
     cncAxis[1].throttle.set(joyAxes[L_JOY_AXIS_Y]);
@@ -151,7 +158,7 @@ void loop() {
     // DEBUG_printf(FST("Analog: LX %4d  %.3f | LY %4d  %.3f || RX %4d  %.3f | RY %4d  %.3f |\n"), leftJoyX.raw, leftJoyX.fvalue, leftJoyY.raw, leftJoyY.fvalue, rightJoyX.raw, rightJoyX.fvalue, rightJoyY.raw, rightJoyY.fvalue);
 
   }
- 
+
   #if BATTERY_PIN >= 0 
   batteryRun(now);
   if (batteryChargeLevel <= 2 && (batteryVoltage > -1.0)) {
@@ -161,5 +168,6 @@ void loop() {
     esp_deep_sleep_start();
   }
   #endif
+
   vTaskDelay(1);
 }

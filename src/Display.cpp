@@ -23,7 +23,11 @@ extern ConfigStr configStaSSID;
 
 static bool isDisplayConfigured = false;
 class LGFX : public lgfx::LGFX_Device {
+#if USE_IPS_DISPLAY
+  lgfx::Panel_ILI9481  _panel_instance;
+#else
   lgfx::Panel_ILI9488  _panel_instance;
+#endif  
   lgfx::Bus_SPI        _bus_instance;
   lgfx::Light_PWM      _light_instance; 
   lgfx::Touch_XPT2046  _touch_instance;
@@ -36,8 +40,13 @@ public:
 
       cfg.spi_host = HSPI_HOST;     // Select the SPI to use (VSPI_HOST or HSPI_HOST)
       cfg.spi_mode = 0;             // Set SPI communication mode (0 ~ 3)
-      cfg.freq_write = 40000000;    // SPI clock at the time of transmission (up to 80MHz, rounded to the value obtained by dividing 80MHz by an integer)
+#if USE_IPS_DISPLAY
+      cfg.freq_write = 15000000;    // SPI clock at the time of transmission (up to 80MHz, rounded to the value obtained by dividing 80MHz by an integer)
+      cfg.freq_read  = 10000000;    // SPI clock when receiving
+#else
+      cfg.freq_write = 70000000;    // SPI clock at the time of transmission (up to 80MHz, rounded to the value obtained by dividing 80MHz by an integer)
       cfg.freq_read  = 16000000;    // SPI clock when receiving
+#endif
       cfg.spi_3wire  = false;        // Set true when receiving with MOSI pin
       cfg.use_lock   = true;        // Set to true when using transaction lock
       cfg.dma_channel = 1;          // Set the DMA channel (1 or 2. 0=disable)   使用するDMAチャンネルを設定 (0=DMA不使用)
@@ -66,8 +75,12 @@ public:
       cfg.offset_rotation  =     0;  // Offset of values ​​in the direction of rotation 0 ~ 7 (4 ~ 7 are upside down)
       cfg.dummy_read_pixel =     8;  // Number of dummy read bits before pixel reading
       cfg.dummy_read_bits  =     1;  // Number of bits of dummy read before reading data other than pixels
-      cfg.readable         =  true;  // Set to true if data can be read
+      cfg.readable         = false;  // Set to true if data can be read
+#if USE_IPS_DISPLAY
+      cfg.invert           =  true;  // Set to true if the light and darkness of the panel is reversed
+#else
       cfg.invert           = false;  // Set to true if the light and darkness of the panel is reversed
+#endif
       cfg.rgb_order        = false;  // Set to true if the red and blue of the panel are swapped
       cfg.dlen_16bit       = false;  // Set to true for panels that send data length in 16-bit units
       cfg.bus_shared       =  true;  // Set to true if the bus is shared with the SD card (bus control is performed with drawJpgFile etc.)
@@ -235,6 +248,9 @@ void displaySetup() {
   }
   tft.init();
   tft.setRotation(3);
+#if USE_IPS_DISPLAY
+  tft.setColorDepth(18);
+#endif
   tft.setBrightness(configDisplayBrightness.get());
   calibrateTouch();
 

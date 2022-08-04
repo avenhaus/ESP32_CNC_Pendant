@@ -19,9 +19,13 @@ uint32_t _cncStatusResponseTs = 0;
 uint32_t _joyJogNextTs = 0;
 bool _isJoyJogging = false;
 
+uint32_t _cncGetConfigTs = 0;
+uint32_t _cncGetConfigState = 0;
+uint32_t _cncGotConfig = 0;
+
 uint32_t cncCmdCnt = 0;
-uint32_t cncCmdOkCnt = 0;
-uint32_t cncCmdErrorCnt = 0;
+uint32_t cncResponseCnt = 0;
+bool cncResponseError = false;
 
 uint32_t _cncNextJogTs = 0;
 int _cncBufferedJogSteps = 0;
@@ -55,8 +59,8 @@ ConfigEnum configCncConnectionType(FST("Connection Type"), configCncConnectionTy
 const StateEnum::Option stateCncConnectionStateOptions[] PROGMEM = {
   { "Unknown", CCS_UNKNOWN },
   { "Connecting", CCS_CONNECTING },
+  { "Get Config", CCS_GET_CONFIG },
   { "Connected", CCS_CONNECTED },
-  { "Got Config", CCS_GOT_CONFIG },
   { "Timeout", CCS_TIMEOUT },
   { "Error", CCS_ERROR }
 };
@@ -139,16 +143,24 @@ CncAxis cncAxis[CNC_MAX_AXES] = {
     CncAxis(FST("C Axis"), CNC_AXIS_C, 'C',  10.0,  100.0,  1.0,  500.0, 100.0),
 };
 
+const ConfigEnum::Option configCncMachineTypeOptions[] PROGMEM = {
+  { "Unknown", CMT_UNKNOWN },
+  { "GRBL", CMT_GRBL },
+  { "FluidNC", CMT_GRBL },
+};
+const size_t configCncMachineTypeOptionsSize = sizeof(configCncMachineTypeOptions) / sizeof(ConfigEnum::Option);
+ConfigEnum configCncMachineType(FST("CNC Type"), configCncMachineTypeOptions, configCncMachineTypeOptionsSize, CMT_UNKNOWN, FST("Unknown/GRBL/FluidNC"), 0, &configGroupCNC);
+
+
 /*==========================================================*\
  * GRBL configuration
 \*==========================================================*/
-
 
 void cncSend(const char* text) {
     if (cncStream) { 
         cncStream->print(text); 
         cncStream->write('\n'); 
-        cncCmdCnt++; 
+        if (text[0] != '?') { cncCmdCnt++; }
     }
     if (debugStream && cncStream != debugStream) { debugStream->println(text); }
 }
@@ -161,6 +173,15 @@ void cncSendCmdJog(CncAxisEnum axis, float speed, float distance) {
     return cncSend(buffer);
 }
 
+
+void cncSetConnectionState(CncConnectionStateEnum state) {
+    stateCncConnectionState.set(state);
+    lv_label_set_text(uiStatusBarState, stateCncConnectionState.getText());
+}
+
+void cncSetCncMachineType(CncMachineTypeEnum type) {
+    configCncMachineType.set(type);
+}
 
 
 /*==========================================================*\
@@ -214,7 +235,8 @@ void _readCncStream() {
             DEBUG_println(cncStreamReadBuffer);
             if (!strcasecmp(FST("ok"), cncStreamReadBuffer)) {
                 _cncCmdResponseTs = millis();
-                if (cncCmdOkCnt + cncCmdErrorCnt < cncCmdCnt) { cncCmdOkCnt++; }            
+                if (cncResponseCnt < cncCmdCnt) { cncResponseCnt++; }
+                cncResponseError = false;            
             } else { parseGrblResponse(cncStreamReadBuffer); }
         }
     } else {
@@ -277,8 +299,14 @@ void cncInit() {
         lv_obj_add_event_cb(uiAxis[i].wZeroButton, _cncSetAxisZeroEvent, LV_EVENT_CLICKED, (void*) i);
     }
 
-    stateCncConnectionState.set(CCS_UNKNOWN);
+    cncSetConnectionState(CCS_UNKNOWN);
     _joyJogNextTs = millis() + joyJogDt.get() * 1000;
+
+    cncSetConnectionState(CCS_CONNECTING);
+    _cncGetConfigTs = 0;
+    _cncGetConfigState = 0;
+    _cncGotConfig = 0;
+
 }
 
 void cncRun(uint32_t now) {
@@ -288,11 +316,22 @@ void cncRun(uint32_t now) {
         _readCncStream();
 
         static uint32_t _getConfigRetryTs = 0;
-        if (stateCncConnectionState.get() == CCS_UNKNOWN || (stateCncConnectionState.get() == CCS_CONNECTING && now > _getConfigRetryTs)) {
-            _joyJogNextTs = now + joyJogDt.get() * 1000;
-            cncSend(FST("$$")); // Read config like max feed rates 
-            stateCncConnectionState.set(CCS_CONNECTING);
-            _getConfigRetryTs = now + 2000; // Retry every 2 sec
+        if (stateCncConnectionState.get() == CCS_CONNECTING || (stateCncConnectionState.get() == CCS_GET_CONFIG)) {
+            if (now > _getConfigRetryTs) {
+                _joyJogNextTs = now + joyJogDt.get() * 1000;
+                cncSend(FST("$$")); // Try read GRBL config
+                cncSetConnectionState(CCS_GET_CONFIG);
+                _getConfigRetryTs = now + 2000; // Retry every 2 sec
+                if(!_cncGetConfigTs) { _cncGetConfigTs = now; }
+                cncResponseCnt = cncCmdCnt - 1;
+            }
+            if (cncResponseCnt == cncCmdCnt) {
+                if (_cncGotConfig) { cncSetConnectionState(CCS_CONNECTED); }
+            }
+            if (now > _cncGetConfigTs + 5000) {
+                DEBUG_printf(FST("Timed out trying to get CNC config"));
+                cncSetConnectionState(CCS_CONNECTED);
+            }
         }
 
         if (stateCncConnectionState.get() == CCS_CONNECTED) {

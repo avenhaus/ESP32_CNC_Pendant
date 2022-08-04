@@ -52,8 +52,8 @@ No.| GPIO | IO | RTC | ADC | Default   | Function
 37 |  23  | IO |     |     | SPI0_MOSI | MOSI LCD, SD
 10 |  25  | IO | R06 | 2_8 |DAC1/I2S-DT| ENCODER0_A
 11 |  26  | IO | R07 | 2_9 |DAC2/I2S-WS| ENCODER0_B
-12 |  27  | IO | R17 | 2_7 | I2S-BCK   | IN_A
-8  |  32  | IO | R09 | 1_4 |           | IN_B
+12 |  27  | IO | R17 | 2_7 | I2S-BCK   | 
+8  |  32  | IO | R09 | 1_4 |           | Poti
 9  |  33  | IO | R08 | 1_5 |           | Battery
 6  |  34  | I  | R04 | 1_6 |           | R_JOY_X
 7  |  35  | I  | R05 | 1_7 |           | R_JOY_Y
@@ -68,6 +68,15 @@ GPIO_34 - GPIO_39 have no internal pullup / pulldown.
 + GPIO 16 and 17 are not available on WROVER (PSRAM)
 * Strapping pins: IO0, IO2, IO4, IO5 (HIGH), IO12 (LOW), IO15 (HIGH)
 */
+
+
+// #define USE_IPS_DISPLAY 1 // ILI9481 instead of ILI9488
+// The IPS display looks better, but is slower as ILI9481 can only be run at 15MHz vs 70MHz SPI for ILI9488.
+// IPS is also more expensive.
+// Fix potential stripes by modifying Panel_9481 driver from:
+//   CMD_PWSET  , 3, 0x07, 0x42, 0x18,
+// to:
+//   CMD_PWSET  , 3, 0x07, 0x42, 0x17,
 
 #define LCD_SCK_PIN 18
 #define LCD_MOSI_PIN 23
@@ -106,6 +115,8 @@ GPIO_34 - GPIO_39 have no internal pullup / pulldown.
 #define L_JOY_Y_PIN 33 
 #define R_JOY_X_PIN 36 
 #define R_JOY_Y_PIN 39 
+#define POTI_PIN 35
+
 
 /* ============================================== *\
  * Extended Inputs (from shift registers 74HC165)
