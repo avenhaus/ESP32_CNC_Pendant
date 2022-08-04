@@ -29,20 +29,19 @@ size_t _readCncToken(const char* src, char* token, size_t max) {
 }
 
 void _cncSetState(const char* token) {
-    if (!strcasecmp(token, FST("Idle"))) { configCncState.set(CS_IDLE); }
-    else if (!strcasecmp(token, FST("Alarm"))) { configCncState.set(CS_ALARM); }
-    else if (!strcasecmp(token, FST("Check"))) { configCncState.set(CS_CHECK); }
-    else if (!strcasecmp(token, FST("Homing"))) { configCncState.set(CS_HOMING); }
-    else if (!strcasecmp(token, FST("Run"))) { configCncState.set(CS_RUN); }
-    else if (!strcasecmp(token, FST("Jog"))) { configCncState.set(CS_JOG); }
-    else if (!strcasecmp(token, FST("Hold"))) { configCncState.set(CS_HOLD); }
-    else if (!strcasecmp(token, FST("Door"))) { configCncState.set(CS_DOOR); }
-    else if (!strcasecmp(token, FST("Sleep"))) { configCncState.set(CS_SLEEP); }
+    if (!strcasecmp(token, FST("Idle"))) { cncSetState(CS_IDLE); }
+    else if (!strcasecmp(token, FST("Alarm"))) { cncSetState(CS_ALARM); }
+    else if (!strcasecmp(token, FST("Check"))) { cncSetState(CS_CHECK); }
+    else if (!strcasecmp(token, FST("Homing"))) { cncSetState(CS_HOMING); }
+    else if (!strcasecmp(token, FST("Run"))) { cncSetState(CS_RUN); }
+    else if (!strcasecmp(token, FST("Jog"))) { cncSetState(CS_JOG); }
+    else if (!strcasecmp(token, FST("Hold"))) { cncSetState(CS_HOLD); }
+    else if (!strcasecmp(token, FST("Door"))) { cncSetState(CS_DOOR); }
+    else if (!strcasecmp(token, FST("Sleep"))) { cncSetState(CS_SLEEP); }
     else {
-        configCncState.set(CS_UNKNOWN);
+        cncSetState(CS_UNKNOWN);
         DEBUG_printf(FST("Unknown CNC state: %s\n"), token);
     }
-    uiUpdateLabel(uiCncStateLabel, configCncState.getText(), -1, cncStateColor[configCncState.get()]);
 }
 
 /*==========================================================*\

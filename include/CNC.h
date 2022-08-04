@@ -50,13 +50,13 @@ typedef enum CncSettingsEncoderMode { CSEM_NONE, CSEM_JOG_STEP, CSEM_JOG_FEED, C
 void cncIncSettingsEncoder(int32_t steps);
 void cncChangeSettingsEncoderMode(int32_t steps);
 
-typedef enum CncConnectionStateEnum {CCS_UNKNOWN, CCS_CONNECTING, CCS_GET_CONFIG, CCS_CONNECTED, CCS_TIMEOUT, CCS_ERROR } CncConnectionStateEnum;
+typedef enum CncConnectionStateEnum { CCS_UNKNOWN, CCS_CONNECTING, CCS_GET_CONFIG, CCS_CONNECTED, CCS_TIMEOUT, CCS_ERROR } CncConnectionStateEnum;
 extern StateEnum stateCncConnectionState;
 void cncSetConnectionState(CncConnectionStateEnum state);
 
 typedef enum CncStateEnum {CS_UNKNOWN, CS_CONNECTING, CS_TIMEOUT, CS_IDLE, CS_ALARM, CS_CHECK, CS_HOMING, CS_RUN, CS_JOG, CS_HOLD, CS_DOOR, CS_SLEEP } CncStateEnum;
 extern StateEnum configCncState;
-extern int32_t cncStateColor[];
+void cncSetState(CncStateEnum state);
 
 typedef enum CncMachineTypeEnum {CMT_UNKNOWN, CMT_GRBL, CMT_FLUIDNC} CncMachineTypeEnum;
 extern ConfigEnum configCncMachineType;
@@ -86,5 +86,8 @@ extern bool cncResponseError;
 
 #define CNC_RUN_MS 10
 #define CNC_MAX_JOG_RATE_MS 100
+#define CNC_CMD_TIMEOUT_MS 100
+#define CNC_STATUS_TIMEOUT_MS 100
+
 
 #endif // _BATTERY_H_

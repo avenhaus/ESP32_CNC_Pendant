@@ -67,6 +67,15 @@ const StateEnum::Option stateCncConnectionStateOptions[] PROGMEM = {
 const size_t stateCncConnectionStateOptionsSize = sizeof(stateCncConnectionStateOptions) / sizeof(StateEnum::Option);
 StateEnum stateCncConnectionState(FST("Connection State"), stateCncConnectionStateOptions, stateCncConnectionStateOptionsSize, CCS_UNKNOWN, 0, 0, &configGroupCNC);
 
+int32_t cncConnectionStateColor[] = {
+  0xD0D0D0, // CCS_UNKNOWN
+  0x40FFFF, // CCS_CONNECTING
+  0xFFFF40, // CCS_GET_CONFIG
+  0x40FF40, // CCS_CONNECTED
+  0xFF4040, // CCS_TIMEOUT
+  0xFF4040, // CCS_ERROR
+};
+
 const ConfigEnum::Option configCncCurrentAxisOptions[] PROGMEM = {
   { "-", CNC_AXIS_NONE },
   { "X", CNC_AXIS_X },
@@ -116,7 +125,6 @@ ConfigFloat joyJogFeedMode(FST("JJ Mode"), 0.1, FST("Joystick Jog speed level"),
 ConfigFloat joyJogAdjust(FST("JJ Adjust"), 0.92, FST("Adjust calculate jog distance values to match reality"), 0, &configGroupCNC);
 ConfigFloat joyJogDt(FST("JJ DT"), 0.1, FST("Time interval between jog commands"), 0, &configGroupCNC);
 
-
 StateFloat stateCncFeed(FST("Feed"), 0.0, FST("Current feed rate"), 0, &configGroupCNC);
 StateFloat stateCncFeedOverride(FST("Feed Override"), 0.0, FST("Feed rate override"), 0, &configGroupCNC);
 StateFloat stateCncRapidsOverride(FST("Feed Override"), 0.0, FST("Feed rate override"), 0, &configGroupCNC);
@@ -160,7 +168,10 @@ void cncSend(const char* text) {
     if (cncStream) { 
         cncStream->print(text); 
         cncStream->write('\n'); 
-        if (text[0] != '?') { cncCmdCnt++; }
+        if (text[0] != '?') { 
+            cncCmdCnt++; 
+            _cncCmdSentTs = millis();
+        }
     }
     if (debugStream && cncStream != debugStream) { debugStream->println(text); }
 }
@@ -176,7 +187,12 @@ void cncSendCmdJog(CncAxisEnum axis, float speed, float distance) {
 
 void cncSetConnectionState(CncConnectionStateEnum state) {
     stateCncConnectionState.set(state);
-    lv_label_set_text(uiStatusBarState, stateCncConnectionState.getText());
+    uiUpdateLabel(uiStatusBarState, stateCncConnectionState.getText(), cncConnectionStateColor[state]);
+}
+
+void cncSetState(CncStateEnum state) {
+    configCncState.set(state);
+    uiUpdateLabel(uiCncStateLabel, configCncState.getText(), -1, cncStateColor[configCncState.get()]);
 }
 
 void cncSetCncMachineType(CncMachineTypeEnum type) {
@@ -329,7 +345,7 @@ void cncRun(uint32_t now) {
                 if (_cncGotConfig) { cncSetConnectionState(CCS_CONNECTED); }
             }
             if (now > _cncGetConfigTs + 5000) {
-                DEBUG_printf(FST("Timed out trying to get CNC config"));
+                DEBUG_println(FST("Timed out trying to get CNC config"));
                 cncSetConnectionState(CCS_CONNECTED);
             }
         }
@@ -345,6 +361,18 @@ void cncRun(uint32_t now) {
                 _cncStatusCheckTs = now;
                 cncStream->write('?');
                 // DEBUG_println(FST("Check Status"));
+            }
+
+            if (_cncCmdSentTs > _cncCmdResponseTs && now > _cncCmdSentTs + CNC_CMD_TIMEOUT_MS) {
+                DEBUG_println(FST("Timed out waiting for CMD response"));
+                cncSetConnectionState(CCS_TIMEOUT);
+                cncSetState(CS_TIMEOUT);
+            }
+
+            if (_cncStatusCheckTs > _cncStatusResponseTs && now > _cncStatusCheckTs + CNC_STATUS_TIMEOUT_MS) {
+                DEBUG_println(FST("Timed out waiting for Status response"));
+                cncSetConnectionState(CCS_TIMEOUT);
+                cncSetState(CS_TIMEOUT);
             }
         }
   }

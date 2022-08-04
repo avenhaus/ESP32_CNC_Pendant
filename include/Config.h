@@ -73,6 +73,7 @@ GPIO_34 - GPIO_39 have no internal pullup / pulldown.
 // #define USE_IPS_DISPLAY 1 // ILI9481 instead of ILI9488
 // The IPS display looks better, but is slower as ILI9481 can only be run at 15MHz vs 70MHz SPI for ILI9488.
 // IPS is also more expensive.
+// 10.66 FPS vs 3.59 FPS
 // Fix potential stripes by modifying Panel_9481 driver from:
 //   CMD_PWSET  , 3, 0x07, 0x42, 0x18,
 // to:

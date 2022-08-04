@@ -44,7 +44,7 @@ public:
       cfg.freq_write = 15000000;    // SPI clock at the time of transmission (up to 80MHz, rounded to the value obtained by dividing 80MHz by an integer)
       cfg.freq_read  = 10000000;    // SPI clock when receiving
 #else
-      cfg.freq_write = 70000000;    // SPI clock at the time of transmission (up to 80MHz, rounded to the value obtained by dividing 80MHz by an integer)
+      cfg.freq_write = 40000000;    // SPI clock at the time of transmission (up to 80MHz, rounded to the value obtained by dividing 80MHz by an integer)
       cfg.freq_read  = 16000000;    // SPI clock when receiving
 #endif
       cfg.spi_3wire  = false;        // Set true when receiving with MOSI pin
@@ -302,6 +302,23 @@ void displayBootScreen() {
   snprintf(buffer, sizeof(buffer)-2,"%s | %s", COMPILE_TIME, COMPILE_DATE);
   tft.drawString(buffer, LCD_WIDTH/2, 28);
 
+#if 0
+// Measure display speed
+uint32_t t = millis() + 20000;
+int n = 0;
+  while(1) {
+    tft.fillScreen(TFT_BLACK);
+    n++;
+    tft.fillScreen(TFT_WHITE);
+    n++;
+
+    if (millis() > t) {
+      DEBUG_printf(FST("FPS: %d %.02f\n"), n, (float)n / ((millis() - (t-20000)) / 1000.0) );
+      n = 0;
+      t = millis() + 20000;
+    }
+  }
+  #endif
 
 #if ENABLE_WIFI
   tft.setCursor(0, 20);
