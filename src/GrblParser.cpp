@@ -13,16 +13,18 @@ int getErrorCode = 0;
 
 extern uint32_t _cncGetConfigTs;
 extern uint32_t _cncGetConfigState;
-extern uint32_t _cncGotConfig;
+extern bool _cncIsConfigResponse;
 
+static const char* _grblStatusTerm = FST("<>|:, \n\r");
+static const char* _grblInfoTerm = FST("/=\n\r");
 
-size_t _readCncToken(const char* src, char* token, size_t max) {
+size_t _readCncToken(const char* src, char* token, size_t max, const char* term) {
     size_t n = 0;
     while (n < max) {
         char c = src[n];
         if (c == 0) { break; }
         token[n++] = c;
-        if (strchr(FST("<>|:, \n\r"), c)) { break; }
+        if (strchr(term, c)) { break; }
     }
     token[n] = '\0';
     return n;
@@ -52,8 +54,32 @@ void _grblHandleConfigLine(const char* line) {
   // DEBUG_printf(FST("GRBL-in: %s\n"), line);
   size_t n = 0;
   if (line[0] == '$') {
-    int par = atoi(line+1);
-    if (par) {
+    _cncIsConfigResponse = true;
+    if (line[1] == '/') {
+        n = 2;
+        char token[64];
+        n += _readCncToken(line+n, token, sizeof(token), _grblInfoTerm);
+        if (!strcmp(token, FST("axes/"))) { 
+            n += _readCncToken(line+n, token, sizeof(token), _grblInfoTerm);
+            if (token[1] == '/') {
+                char aLetter = token[0];
+                int axis = -1;
+                if (aLetter >= 'X' && aLetter <= 'Z') { axis = aLetter - 'X'; }
+                else if (aLetter >= 'A' && aLetter <= 'C') { axis = aLetter - 'A' + 3; }
+                else { DEBUG_printf(FST("Unknown axis letter: %c\n"), aLetter); }
+                if (axis > 0) {
+                    n += _readCncToken(line+n, token, sizeof(token), _grblInfoTerm);
+                    if (!strcmp(token, FST("max_rate_mm_per_min="))) { cncAxis[axis].maxFeed.set(atof(line+n)); }
+                    else if (!strcmp(token, FST("max_travel_mm="))) { cncAxis[axis].maxTravel.set(atof(line+n)); }
+                    else if (!strcmp(token, FST("homing/"))) {
+                        n += _readCncToken(line+n, token, sizeof(token), _grblInfoTerm);
+                        DEBUG_printf(FST("Homing Setting for axis %d: %s (%s)\n"), axis, token, line+n);
+                    } else { DEBUG_printf(FST("Setting for axis %d: %s (%s)\n"), axis, token, line+n); }
+                }
+            }            
+        }
+    } else if (line[1] >= '0' && line[1] <= '9') {
+      int par = atoi(line+1);
       n = 1;
       while (line[n] && line[n] != '=') { n++; }
       if (line[n] == '=') { n++; }
@@ -67,7 +93,6 @@ void _grblHandleConfigLine(const char* line) {
       }
       if (par == 120) {
         cncSetCncMachineType(CMT_GRBL);
-        _cncGotConfig = 1;
       }
     }
   }
@@ -88,6 +113,7 @@ D Door switch
 0123 Macro switch status
 */
 void _grblHandleStatusLine(const char* line) {
+    // DEBUG_printf(FST("RT: %d\n"), millis() - _cncStatusCheckTs);
     _cncStatusResponseTs = millis();
     size_t n = 0;
     size_t i = 0;
@@ -97,8 +123,9 @@ void _grblHandleStatusLine(const char* line) {
     bool gotPinStates = false;
     int maxAxis = -1;
     char token[64];
+    
     do {
-        i = _readCncToken(line+n, token, sizeof(token));
+        i = _readCncToken(line+n, token, sizeof(token), _grblStatusTerm);
         char sep = token[i-1];
         if (i > 1) { token[i-1] = '\0'; }
         if (!strcmp(token, FST("<"))) { state = PS_STATE; }
@@ -205,11 +232,11 @@ void parseGrblResponse(const char* line) {
     }
     else {
         char token[32];
-        size_t n = _readCncToken(line, token, sizeof(token));
+        size_t n = _readCncToken(line, token, sizeof(token), _grblStatusTerm);
         if (!strcasecmp(token, FST("error:"))) {
             if (cncResponseCnt < cncCmdCnt) { cncResponseCnt++; }
             cncResponseError = true;
-            _readCncToken(line+n, token, sizeof(token));
+            _readCncToken(line+n, token, sizeof(token), _grblStatusTerm);
             _grblHandleErrorLine(token);
         }
     }

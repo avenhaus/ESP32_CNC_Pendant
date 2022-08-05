@@ -142,7 +142,6 @@ GPIO_34 - GPIO_39 have no internal pullup / pulldown.
 \* ============================================== */
 
 #define ENABLE_DISPLAY 1
-
 typedef enum JoyAxis {
     L_JOY_AXIS_X,
     L_JOY_AXIS_Y,

@@ -9,6 +9,15 @@
 // http://fluidnc.local/  192.168.0.184
 // http://grblesp.local/
 
+
+const char* _axisInfoCmd[] PROGMEM = {
+    "max_rate_mm_per_min",
+    "max_travel_mm",
+    "homing/mpos_mm",
+    "homing/positive_direction"
+};
+const int _AXIS_INFO_CMD_CNT = sizeof(_axisInfoCmd) / sizeof(char*);
+
 void parseGrblResponse(const char* line);
 
 Stream* cncStream = &Serial2;
@@ -21,7 +30,8 @@ bool _isJoyJogging = false;
 
 uint32_t _cncGetConfigTs = 0;
 uint32_t _cncGetConfigState = 0;
-uint32_t _cncGotConfig = 0;
+uint32_t _cncConfigResponseCount = 0;
+bool _cncIsConfigResponse = false;
 
 uint32_t cncCmdCnt = 0;
 uint32_t cncResponseCnt = 0;
@@ -154,7 +164,7 @@ CncAxis cncAxis[CNC_MAX_AXES] = {
 const ConfigEnum::Option configCncMachineTypeOptions[] PROGMEM = {
   { "Unknown", CMT_UNKNOWN },
   { "GRBL", CMT_GRBL },
-  { "FluidNC", CMT_GRBL },
+  { "FluidNC", CMT_FLUIDNC }
 };
 const size_t configCncMachineTypeOptionsSize = sizeof(configCncMachineTypeOptions) / sizeof(ConfigEnum::Option);
 ConfigEnum configCncMachineType(FST("CNC Type"), configCncMachineTypeOptions, configCncMachineTypeOptionsSize, CMT_UNKNOWN, FST("Unknown/GRBL/FluidNC"), 0, &configGroupCNC);
@@ -197,6 +207,8 @@ void cncSetState(CncStateEnum state) {
 
 void cncSetCncMachineType(CncMachineTypeEnum type) {
     configCncMachineType.set(type);
+    if (type != CMT_UNKNOWN) { cncSetConnectionState(CCS_CONNECTED); }
+    DEBUG_printf(FST("Connected Machine Type: %d\n"), type);
 }
 
 
@@ -250,9 +262,14 @@ void _readCncStream() {
             DEBUG_print(FST("CNC: "));
             DEBUG_println(cncStreamReadBuffer);
             if (!strcasecmp(FST("ok"), cncStreamReadBuffer)) {
+                // DEBUG_printf(FST("CMD RT: %d\n"), millis() - _cncCmdSentTs);
                 _cncCmdResponseTs = millis();
                 if (cncResponseCnt < cncCmdCnt) { cncResponseCnt++; }
-                cncResponseError = false;            
+                cncResponseError = false;
+                if (_cncIsConfigResponse) {
+                    _cncIsConfigResponse = false;
+                    _cncConfigResponseCount++;
+                }
             } else { parseGrblResponse(cncStreamReadBuffer); }
         }
     } else {
@@ -321,8 +338,8 @@ void cncInit() {
     cncSetConnectionState(CCS_CONNECTING);
     _cncGetConfigTs = 0;
     _cncGetConfigState = 0;
-    _cncGotConfig = 0;
-
+    _cncConfigResponseCount = 0;
+    _cncIsConfigResponse = false;
 }
 
 void cncRun(uint32_t now) {
@@ -335,14 +352,25 @@ void cncRun(uint32_t now) {
         if (stateCncConnectionState.get() == CCS_CONNECTING || (stateCncConnectionState.get() == CCS_GET_CONFIG)) {
             if (now > _getConfigRetryTs) {
                 _joyJogNextTs = now + joyJogDt.get() * 1000;
-                cncSend(FST("$$")); // Try read GRBL config
-                cncSetConnectionState(CCS_GET_CONFIG);
-                _getConfigRetryTs = now + 2000; // Retry every 2 sec
-                if(!_cncGetConfigTs) { _cncGetConfigTs = now; }
-                cncResponseCnt = cncCmdCnt - 1;
+                if (_cncConfigResponseCount == 0) {
+                    cncSend(FST("$$")); // Try read GRBL config
+                    cncSetConnectionState(CCS_GET_CONFIG);
+                    _getConfigRetryTs = now + 2000; // Retry every 2 sec
+                    if(!_cncGetConfigTs) { _cncGetConfigTs = now; }
+                    cncResponseCnt = cncCmdCnt - 1;
+                }
             }
             if (cncResponseCnt == cncCmdCnt) {
-                if (_cncGotConfig) { cncSetConnectionState(CCS_CONNECTED); }
+                if (_cncConfigResponseCount > 0 && configCncMachineType.get() == CMT_UNKNOWN) { 
+                    char buffer[64];
+                    int n = _cncConfigResponseCount - 1;  // First one is GRBL config $$
+                    if (n < _AXIS_INFO_CMD_CNT * 4) {
+                        char axis = cncAxis[n/_AXIS_INFO_CMD_CNT].letter;
+                        n = n % _AXIS_INFO_CMD_CNT;
+                        sprintf(buffer, FST("$/axes/%c/%s"), axis, _axisInfoCmd[n]);
+                        cncSend(buffer);
+                    } else { cncSetCncMachineType(CMT_FLUIDNC); }
+                }
             }
             if (now > _cncGetConfigTs + 5000) {
                 DEBUG_println(FST("Timed out trying to get CNC config"));
