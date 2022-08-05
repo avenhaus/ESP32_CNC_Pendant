@@ -173,7 +173,7 @@ ConfigEnum configCncMachineType(FST("CNC Type"), configCncMachineTypeOptions, co
 const char* CNC_CMD_RESET = FST("$X");
 const char* CNC_CMD_HOME_ALL = FST("$H");
 const char* CNC_CMD_ZERO_ALL = FST("G10 L20 P0 X0 Y0 Z0 A0");
-const char* CNC_CMD_RESET = FST("$Bye");
+const char* CNC_CMD_RESTART = FST("$Bye");
 
 const char * _buttonCmd[] = {
     CNC_CMD_HOME_ALL, // UIB_HOME
@@ -187,8 +187,9 @@ const char * _buttonCmd[] = {
     nullptr, // UIB_SPINDLE
     nullptr, // UIB_FLOOD
     nullptr, // UIB_MIST 
+    nullptr, // UIB_PROBE
     nullptr, // UIB_MACRO
-    CNC_CMD_RESET, // UIB_RESET
+    CNC_CMD_RESTART, // UIB_RESTART
 };
 
 /* ============================================== *\
@@ -368,7 +369,7 @@ void cncInit() {
     }
 
     for (int i=0; i<UIB_MAX; i++) {
-        lv_obj_add_event_cb(uiButton[i], _uiButtonPressed, LV_EVENT_RELEASED, (void*) i);
+        if (uiButton[i]) { lv_obj_add_event_cb(uiButton[i], _uiButtonPressed, LV_EVENT_RELEASED, (void*) i); }
     }
 
 

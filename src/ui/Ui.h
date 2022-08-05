@@ -68,10 +68,11 @@ extern lv_obj_t* uiCncPinLabel;
 extern lv_obj_t * uiMessageToast;
 extern lv_obj_t * uiErrorToast;
 
+extern const lv_font_t lv_font_icon_22;
 
 // Buttons
 lv_obj_t* uiCreateButtons(lv_obj_t* parent, lv_coord_t x, lv_coord_t y);
-typedef enum UI_BUTTON_ENUM { UIB_HOME, UIB_ZERO, UIB_FILES, UIB_SETTINGS, UIB_HELP, UIB_PLAY, UIB_PAUSE, UIB_STOP, UIB_SPINDLE, UIB_FLOOD, UIB_MIST, UIB_MACRO, UIB_RESET, UIB_MAX } UI_BUTTON_ENUM;
+typedef enum UI_BUTTON_ENUM { UIB_HOME, UIB_ZERO, UIB_FILES, UIB_SETTINGS, UIB_HELP, UIB_PLAY, UIB_PAUSE, UIB_STOP, UIB_SPINDLE, UIB_FLOOD, UIB_MIST, UIB_PROBE, UIB_MACRO, UIB_RESTART, UIB_MAX } UI_BUTTON_ENUM;
 extern lv_obj_t* uiButton[UIB_MAX];
 
 // Keyboard
