@@ -72,13 +72,13 @@ lv_obj_t* uiCreatePanelWAxis(lv_obj_t* parent, lv_coord_t x, lv_coord_t y) {
 
     const int xpad = -2;
     const int ypad = 5;
-    uiAxis[0].wZeroButton = uiCreateButton(uiPanelWAxis, xpad, ypad +  0, 25, 25, FST("0"), &lv_font_montserrat_22);
+    uiAxis[0].wZeroButton = uiCreateButton(uiPanelWAxis, xpad, ypad +  0, 25, 25, FST("0"), &lv_font_montserrat_22, LV_ALIGN_TOP_RIGHT);
     lv_obj_set_style_text_decor(lv_obj_get_child(uiAxis[0].wZeroButton, 0), LV_TEXT_DECOR_STRIKETHROUGH, LV_PART_MAIN | LV_STATE_DEFAULT);
-    uiAxis[1].wZeroButton = uiCreateButton(uiPanelWAxis, xpad, ypad + 32, 25, 25, FST("0"), &lv_font_montserrat_22);
+    uiAxis[1].wZeroButton = uiCreateButton(uiPanelWAxis, xpad, ypad + 32, 25, 25, FST("0"), &lv_font_montserrat_22, LV_ALIGN_TOP_RIGHT);
     lv_obj_set_style_text_decor(lv_obj_get_child(uiAxis[1].wZeroButton, 0), LV_TEXT_DECOR_STRIKETHROUGH, LV_PART_MAIN | LV_STATE_DEFAULT);
-    uiAxis[2].wZeroButton = uiCreateButton(uiPanelWAxis, xpad, ypad + 64, 25, 25, FST("0"), &lv_font_montserrat_22);
+    uiAxis[2].wZeroButton = uiCreateButton(uiPanelWAxis, xpad, ypad + 64, 25, 25, FST("0"), &lv_font_montserrat_22, LV_ALIGN_TOP_RIGHT);
     lv_obj_set_style_text_decor(lv_obj_get_child(uiAxis[2].wZeroButton, 0), LV_TEXT_DECOR_STRIKETHROUGH, LV_PART_MAIN | LV_STATE_DEFAULT);
-    uiAxis[3].wZeroButton = uiCreateButton(uiPanelWAxis, xpad, ypad + 96, 25, 25, FST("0"), &lv_font_montserrat_22);
+    uiAxis[3].wZeroButton = uiCreateButton(uiPanelWAxis, xpad, ypad + 96, 25, 25, FST("0"), &lv_font_montserrat_22, LV_ALIGN_TOP_RIGHT);
     lv_obj_set_style_text_decor(lv_obj_get_child(uiAxis[3].wZeroButton, 0), LV_TEXT_DECOR_STRIKETHROUGH, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     return uiPanelWAxis;

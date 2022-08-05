@@ -26,13 +26,13 @@ lv_obj_t* uiCreatePanel(lv_obj_t* parent, const lv_font_t* font, lv_coord_t x, l
     return uiPanel;
 }
 
-lv_obj_t* uiCreateButton(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h, const char* text, const lv_font_t* font, lv_event_cb_t eventCb, void *userData, lv_event_code_t filter) {
+lv_obj_t* uiCreateButton(lv_obj_t* parent, lv_coord_t x, lv_coord_t y, lv_coord_t w, lv_coord_t h, const char* text, const lv_font_t* font, lv_align_t align, lv_event_cb_t eventCb, void *userData, lv_event_code_t filter) {
 
     lv_obj_t* uiButton = lv_btn_create(parent);
 
     lv_obj_set_size(uiButton, w, h);
     lv_obj_set_pos(uiButton, x, y);
-    lv_obj_set_align(uiButton, LV_ALIGN_TOP_RIGHT);
+    lv_obj_set_align(uiButton, align);
 
     lv_obj_set_style_bg_color(uiButton, lv_color_hex(UI_COLOR_BUTTON_BG), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_shadow_color(uiButton, lv_color_hex(UI_COLOR_BUTTON_SHADOW), LV_PART_MAIN | LV_STATE_DEFAULT);

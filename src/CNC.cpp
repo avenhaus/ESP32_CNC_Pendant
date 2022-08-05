@@ -170,6 +170,41 @@ const size_t configCncMachineTypeOptionsSize = sizeof(configCncMachineTypeOption
 ConfigEnum configCncMachineType(FST("CNC Type"), configCncMachineTypeOptions, configCncMachineTypeOptionsSize, CMT_UNKNOWN, FST("Unknown/GRBL/FluidNC"), 0, &configGroupCNC);
 
 
+const char* CNC_CMD_RESET = FST("$X");
+const char* CNC_CMD_HOME_ALL = FST("$H");
+const char* CNC_CMD_ZERO_ALL = FST("G10 L20 P0 X0 Y0 Z0 A0");
+const char* CNC_CMD_RESET = FST("$Bye");
+
+const char * _buttonCmd[] = {
+    CNC_CMD_HOME_ALL, // UIB_HOME
+    CNC_CMD_ZERO_ALL, // UIB_ZERO
+    nullptr, // UIB_FILES
+    nullptr, // UIB_SETTINGS
+    nullptr, // UIB_HELP
+    nullptr, // UIB_PLAY
+    nullptr, // UIB_PAUSE
+    nullptr, // UIB_STOP
+    nullptr, // UIB_SPINDLE
+    nullptr, // UIB_FLOOD
+    nullptr, // UIB_MIST 
+    nullptr, // UIB_MACRO
+    CNC_CMD_RESET, // UIB_RESET
+};
+
+/* ============================================== *\
+ * Event Callbacks
+\* ============================================== */
+
+static void _uiButtonPressed(lv_event_t* e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    if(event != LV_EVENT_RELEASED) { return; }
+    lv_obj_t* ta = lv_event_get_target(e);
+    uint32_t uib = (uint32_t) lv_event_get_user_data(e);
+    DEBUG_printf(FST("UI Button: %d\n"), uib);
+    if (_buttonCmd[uib]) { cncSend(_buttonCmd[uib]); }
+}
+
+
 /*==========================================================*\
  * GRBL configuration
 \*==========================================================*/
@@ -301,7 +336,7 @@ void cncAxisEncoderPress() {
 
 static void _cncResetAlarm(lv_event_t * e) {
     DEBUG_println(FST("Reset Alarm"));
-    cncSend(FST("$X"));
+    cncSend(CNC_CMD_RESET);
 }
 
 static void _cncSetAxisZeroEvent(lv_event_t * e) {
@@ -331,6 +366,11 @@ void cncInit() {
     for (int i=0; i<4; i++) {
         lv_obj_add_event_cb(uiAxis[i].wZeroButton, _cncSetAxisZeroEvent, LV_EVENT_CLICKED, (void*) i);
     }
+
+    for (int i=0; i<UIB_MAX; i++) {
+        lv_obj_add_event_cb(uiButton[i], _uiButtonPressed, LV_EVENT_RELEASED, (void*) i);
+    }
+
 
     cncSetConnectionState(CCS_UNKNOWN);
     _joyJogNextTs = millis() + joyJogDt.get() * 1000;

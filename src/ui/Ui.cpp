@@ -26,6 +26,7 @@ void uiMainScreenInit(void) {
     uiCreatePanelWAxis(uiMainScreen, 5, 29);
     uiCreatePanelMAxis(uiMainScreen, 260, 29);
     uiCreatePanelSettings(uiMainScreen, 5, 183);
+    uiCreateButtons(uiMainScreen, 378, 181);
     uiCreateKeyboard(uiMainScreen);
 
     uiMessageToast = lv_label_create(uiMainScreen);
