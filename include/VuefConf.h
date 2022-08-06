@@ -19,10 +19,10 @@
 
 #define COMMAND_BUFFER_SIZE 64
 
-#define ENABLE_WIFI 0
+#define ENABLE_WIFI 1
 #define ENABLE_OTA 0
 #define ENABLE_TELNET 0
-#define ENABLE_WEB_SERVER 0
+#define ENABLE_WEB_SERVER 1
 #define WEBUI_TABS "control,settings,files,wizard"
 #define WEBUI_START_TAB "settings"
 #define ENABLE_EMBEDDED_WEB_UI 0
@@ -31,7 +31,7 @@
 #define ENABLE_MDNS 1
 #define ENABLE_NTP 1
 #define ENABLE_SPIFFS 1
-#define ENABLE_CLI 0
+#define ENABLE_CLI 1
 
 #define ENABLE_STATE_REG 1
 #define ENABLE_WS_STATE_MONITOR 1

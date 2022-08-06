@@ -8,7 +8,7 @@
 \* ============================================== */
 
 lv_obj_t* uiStatusBar;
-lv_obj_t* uiStatusBarIpAddr;
+lv_obj_t* uiStatusBarLocalIpAddr;
 lv_obj_t* uiStatusBarTime;
 lv_obj_t* uiStatusBarState;
 
@@ -38,16 +38,16 @@ lv_obj_t* uiCreateStatusBar(lv_obj_t* parent) {
     lv_obj_set_style_text_font(uiStatusBar, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // uiStatusBarIpAddr
-    uiStatusBarIpAddr = lv_label_create(uiStatusBar);
-    lv_obj_set_size(uiStatusBarIpAddr, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-    lv_obj_set_align(uiStatusBarIpAddr, LV_ALIGN_LEFT_MID);
-    UI_TE(lv_label_set_text(uiStatusBarIpAddr, FST("192.168.100.22")));
+    uiStatusBarLocalIpAddr = lv_label_create(uiStatusBar);
+    lv_obj_set_size(uiStatusBarLocalIpAddr, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_align(uiStatusBarLocalIpAddr, LV_ALIGN_LEFT_MID);
+    UI_TE(lv_label_set_text(uiStatusBarLocalIpAddr, FST("No WIFI")));
 
    // uiStatusBarTime
     uiStatusBarTime = lv_label_create(uiStatusBar);
     lv_obj_set_size(uiStatusBarTime, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     lv_obj_set_align(uiStatusBarTime, LV_ALIGN_RIGHT_MID);
-    UI_TE(lv_label_set_text(uiStatusBarTime, FST("20:00:11 12.5.1971")));
+    UI_TE(lv_label_set_text(uiStatusBarTime, FST("20:00:11")));
 
     // uiStatusBarState
     uiStatusBarState = lv_label_create(uiStatusBar);

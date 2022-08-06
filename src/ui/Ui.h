@@ -12,7 +12,7 @@ void uiRun(uint32_t now);
 lv_obj_t* uiCreateStatusBar(lv_obj_t* parent);
 
 extern lv_obj_t* uiStatusBar;
-extern lv_obj_t* uiStatusBarIpAddr;
+extern lv_obj_t* uiStatusBarLocalIpAddr;
 extern lv_obj_t* uiStatusBarTime;
 extern lv_obj_t* uiStatusBarState;
 

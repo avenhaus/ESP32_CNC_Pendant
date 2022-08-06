@@ -201,7 +201,7 @@ void _grblHandleStatusLine(const char* line) {
         }
     }
     for (int a=0; a<=maxAxis; a++) { cncAxis[a].showCoordinates(); }
-
+    if (stateCncConnectionState.get() == CCS_TIMEOUT) { cncSetConnectionState(CCS_CONNECTED); }
 }
 
 void _grblHandleMessageLine(const char* line) {

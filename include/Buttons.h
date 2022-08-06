@@ -38,9 +38,14 @@ CBF_ALARM_RESET,
 CBF_CNC_REBOOT,
 CBF_PENDANT_REBOOT,
 CBF_PENDANT_LOCK,
+
+CBF_MENU,
+CBF_MENU_UP,
+CBF_MENU_DOWN,
+CBF_MENU_SELECT,
+CBF_MENU_CANCEL,
 CBF_PENDANT_FILES,
 CBF_CNC_FILES,
-CBF_MENU,
 
 CBF_MOVE_SLOW,
 CBF_MOVE_FAST,
@@ -79,6 +84,13 @@ CBF_MACRO_7,
 CBF_MACRO_8,
 CBF_MACRO_9,
 } CncButtonFunctionEnum;
+
+
+/*==========================================================*\
+ * Functions
+\*==========================================================*/
+
+void buttonsInit();
 
 
 #endif // _BUTTONS_H_

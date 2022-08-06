@@ -7,6 +7,7 @@
 #include "Battery.h"
 #include "Encoder.h"
 #include "CNC.h"
+#include "Buttons.h"
 
 // #include <ESP32Encoder.h>
 
@@ -87,6 +88,7 @@ adcInit();
   #endif
 
   cncInit();
+  buttonsInit();
 
   xTaskCreatePinnedToCore(
     _inputTask,     // Task function

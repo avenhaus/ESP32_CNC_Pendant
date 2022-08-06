@@ -34,9 +34,15 @@ const ConfigEnum::Option configButtonFunctionOptions[] PROGMEM = {
   { "CNC_REBOOT", CBF_CNC_REBOOT },
   { "PENDANT_REBOOT", CBF_PENDANT_REBOOT },
   { "PENDANT_LOCK", CBF_PENDANT_LOCK },
+  
+  { "MENU", CBF_MENU },
+  { "MENU_UP", CBF_MENU_UP },
+  { "MENU_DOWN", CBF_MENU_DOWN },
+  { "MENU_SELECT", CBF_MENU_SELECT },
+  { "MENU_CANCEL", CBF_MENU_CANCEL },
   { "PENDANT_FILES", CBF_PENDANT_FILES },
   { "CNC_FILES", CBF_CNC_FILES },
-  { "MENU", CBF_MENU },
+ 
 
   { "MOVE_SLOW", CBF_MOVE_SLOW },
   { "MOVE_FAST", CBF_MOVE_FAST },
@@ -82,3 +88,43 @@ ConfigEnum configButtonLB(FST("Left Blue"), configButtonFunctionOptions, configB
 ConfigEnum configButtonLR(FST("Left Red"), configButtonFunctionOptions, configButtonFunctionOptionsSize, 1, _cncButtonHelp, 0, &configGroupButtons);
 ConfigEnum configButtonLG(FST("Left Green"), configButtonFunctionOptions, configButtonFunctionOptionsSize, 1, _cncButtonHelp, 0, &configGroupButtons);
 
+const char * _uiButtonCmd[] = {
+    CNC_CMD_HOME_ALL, // UIB_HOME
+    CNC_CMD_ZERO_ALL, // UIB_ZERO
+    nullptr, // UIB_FILES
+    nullptr, // UIB_SETTINGS
+    nullptr, // UIB_HELP
+    CNC_CMD_CONTROL_START, // UIB_PLAY
+    CNC_CMD_CONTROL_PAUSE, // UIB_PAUSE
+    CNC_CMD_CONTROL_RESET, // UIB_STOP
+    nullptr, // UIB_SPINDLE
+    nullptr, // UIB_FLOOD
+    nullptr, // UIB_MIST 
+    nullptr, // UIB_PROBE
+    nullptr, // UIB_MACRO
+    CNC_CMD_RESTART, // UIB_RESTART
+};
+
+
+/* ============================================== *\
+ * Event Callbacks
+\* ============================================== */
+
+static void _uiButtonPressed(lv_event_t* e) {
+    lv_event_code_t event = lv_event_get_code(e);
+    if(event != LV_EVENT_RELEASED) { return; }
+    lv_obj_t* ta = lv_event_get_target(e);
+    uint32_t uib = (uint32_t) lv_event_get_user_data(e);
+    DEBUG_printf(FST("UI Button: %d\n"), uib);
+    if (_uiButtonCmd[uib]) { cncSend(_uiButtonCmd[uib]); }
+}
+
+/*==========================================================*\
+ * Functions
+\*==========================================================*/
+
+void buttonsInit() {
+    for (int i=0; i<UIB_MAX; i++) {
+        if (uiButton[i]) { lv_obj_add_event_cb(uiButton[i], _uiButtonPressed, LV_EVENT_RELEASED, (void*) i); }
+    }
+}

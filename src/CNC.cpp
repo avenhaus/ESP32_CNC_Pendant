@@ -171,43 +171,20 @@ const size_t configCncMachineTypeOptionsSize = sizeof(configCncMachineTypeOption
 ConfigEnum configCncMachineType(FST("CNC Type"), configCncMachineTypeOptions, configCncMachineTypeOptionsSize, CMT_UNKNOWN, FST("Unknown/GRBL/FluidNC"), 0, &configGroupCNC);
 
 
+
+/*==========================================================*\
+ * CNC Commands
+\*==========================================================*/
+
+
 const char* CNC_CMD_ALARM_RESET = FST("$X");
 const char* CNC_CMD_CONTROL_START = FST("~");
 const char* CNC_CMD_CONTROL_PAUSE = FST("!");
 const char* CNC_CMD_CONTROL_RESET = FST("\x18");
 const char* CNC_CMD_HOME_ALL = FST("$H");
 const char* CNC_CMD_ZERO_ALL = FST("G10 L20 P0 X0 Y0 Z0 A0");
+const char* CNC_CMD_ZERO_XYZ = FST("G10 L20 P0 X0 Y0 Z0");
 const char* CNC_CMD_RESTART = FST("$Bye");
-
-const char * _buttonCmd[] = {
-    CNC_CMD_HOME_ALL, // UIB_HOME
-    CNC_CMD_ZERO_ALL, // UIB_ZERO
-    nullptr, // UIB_FILES
-    nullptr, // UIB_SETTINGS
-    nullptr, // UIB_HELP
-    CNC_CMD_CONTROL_START, // UIB_PLAY
-    CNC_CMD_CONTROL_PAUSE, // UIB_PAUSE
-    CNC_CMD_CONTROL_RESET, // UIB_STOP
-    nullptr, // UIB_SPINDLE
-    nullptr, // UIB_FLOOD
-    nullptr, // UIB_MIST 
-    nullptr, // UIB_PROBE
-    nullptr, // UIB_MACRO
-    CNC_CMD_RESTART, // UIB_RESTART
-};
-
-/* ============================================== *\
- * Event Callbacks
-\* ============================================== */
-
-static void _uiButtonPressed(lv_event_t* e) {
-    lv_event_code_t event = lv_event_get_code(e);
-    if(event != LV_EVENT_RELEASED) { return; }
-    lv_obj_t* ta = lv_event_get_target(e);
-    uint32_t uib = (uint32_t) lv_event_get_user_data(e);
-    DEBUG_printf(FST("UI Button: %d\n"), uib);
-    if (_buttonCmd[uib]) { cncSend(_buttonCmd[uib]); }
-}
 
 
 /*==========================================================*\
@@ -334,7 +311,7 @@ void cncAxisEncoderPress() {
     uint32_t now = millis();
     if (lastPressTs > now - 500) {
         DEBUG_println(FST("Zero XYZ axes"));
-        cncSend(FST("G10 L20 P0 X0 Y0 Z0"));
+        cncSend(CNC_CMD_ZERO_XYZ);
     } else { cncSetAzisZero(configCncCurrentAxis.get()-1); }
     lastPressTs = now;
 }
@@ -372,11 +349,6 @@ void cncInit() {
         lv_obj_add_event_cb(uiAxis[i].wZeroButton, _cncSetAxisZeroEvent, LV_EVENT_CLICKED, (void*) i);
     }
 
-    for (int i=0; i<UIB_MAX; i++) {
-        if (uiButton[i]) { lv_obj_add_event_cb(uiButton[i], _uiButtonPressed, LV_EVENT_RELEASED, (void*) i); }
-    }
-
-
     cncSetConnectionState(CCS_UNKNOWN);
     _joyJogNextTs = millis() + joyJogDt.get() * 1000;
 
@@ -394,7 +366,8 @@ void cncRun(uint32_t now) {
         _readCncStream();
 
         static uint32_t _getConfigRetryTs = 0;
-        if (stateCncConnectionState.get() == CCS_CONNECTING || (stateCncConnectionState.get() == CCS_GET_CONFIG)) {
+        CncConnectionStateEnum state = (CncConnectionStateEnum) stateCncConnectionState.get();
+        if (state == CCS_CONNECTING || state == CCS_GET_CONFIG) {
             if (now > _getConfigRetryTs) {
                 _joyJogNextTs = now + joyJogDt.get() * 1000;
                 if (_cncConfigResponseCount == 0) {
@@ -423,7 +396,8 @@ void cncRun(uint32_t now) {
             }
         }
 
-        if (stateCncConnectionState.get() == CCS_CONNECTED) {
+        state = (CncConnectionStateEnum) stateCncConnectionState.get();
+        if (state == CCS_CONNECTED) {
             if (now >= _joyJogNextTs) {
                 _cncJoyJog();
                 _joyJogNextTs += joyJogDt.get() * 1000;
@@ -446,6 +420,14 @@ void cncRun(uint32_t now) {
                 DEBUG_println(FST("Timed out waiting for Status response"));
                 cncSetConnectionState(CCS_TIMEOUT);
                 cncSetState(CS_TIMEOUT);
+            }
+        }
+        if (state == CCS_TIMEOUT) {
+            int i = configCheckStatusInterval.get();
+            if (i > 0 && now >= _cncStatusCheckTs + i) {
+                _cncStatusCheckTs = now;
+                cncStream->write('?');
+                // DEBUG_println(FST("Check Status"));
             }
         }
   }
@@ -559,7 +541,7 @@ float CncAxis::incFeed(int32_t steps) {
     float tmp = feed.get();
     tmp += 100.0 * steps; 
     if (tmp < 1.0) { tmp = 1.0; }
-    if (tmp > 5000.0) { tmp = 5000.0; }
+    if (tmp > maxFeed.get()) { tmp = maxFeed.get(); }
     feed.set(tmp);
     if (axis == CNC_AXIS_X) { cncAxis[CNC_AXIS_Y-1].feed.set(tmp); }
     if (axis == CNC_AXIS_Y) { cncAxis[CNC_AXIS_X-1].feed.set(tmp); }
@@ -571,7 +553,7 @@ float CncAxis::incJogFeed(int32_t steps) {
     float tmp = jogFeed.get();
     tmp += 100.0 * steps; 
     if (tmp < 1.0) { tmp = 1.0; }
-    if (tmp > 5000.0) { tmp = 5000.0; }
+    if (tmp > maxFeed.get()) { tmp = maxFeed.get(); }
     jogFeed.set(tmp);
     if (axis == CNC_AXIS_X) { cncAxis[CNC_AXIS_Y-1].jogFeed.set(tmp); }
     if (axis == CNC_AXIS_Y) { cncAxis[CNC_AXIS_X-1].jogFeed.set(tmp); }

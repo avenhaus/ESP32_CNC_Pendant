@@ -331,15 +331,37 @@ int n = 0;
 
 void mainScreen() {
   uiInit();
-  char buffer[64];
-  IPAddress lip = WiFi.localIP();
-  sprintf(buffer, FST("L:%d.%d.%d.%d"), lip[0], lip[1], lip[2], lip[3]);   
-  lv_label_set_text(uiStatusBarIpAddr, buffer);
+#if ENABLE_WIFI
+  int mode = WiFi.getMode();
+  DEBUG_printf(FST("WIFI Mode: %d\n"), mode);
+  if (mode != WIFI_OFF) {
+    char buffer[64];
+    IPAddress lip = mode == WIFI_STA ? WiFi.localIP() : WiFi.softAPIP();
+    sprintf(buffer, FST("L:%d.%d.%d.%d"), lip[0], lip[1], lip[2], lip[3]);   
+    lv_label_set_text(uiStatusBarLocalIpAddr, buffer);
+  } else { lv_label_set_text(uiStatusBarLocalIpAddr, FST("No WIFI")); }
+#else
+  lv_label_set_text(uiStatusBarLocalIpAddr, FST("No WIFI"));
+#endif 
 }
+
+
 
 void guiRun(uint32_t now) {
    lv_timer_handler();
    uiRun(now);
+
+  static uint32_t timeUpdateTs = 0; 
+  if (now >= timeUpdateTs) {
+    timeUpdateTs + 1000;
+    time_t nowTS = 0;
+    time(&nowTS);
+    char buffer[32];
+    // strftime(buffer, sizeof(buffer), FST("%H:%M:%S"), localtime(&nowTS));
+    strftime(buffer, sizeof(buffer), configTimeFormat.get(), localtime(&nowTS));
+    lv_label_set_text(uiStatusBarTime, buffer);
+  }
 }
+   
 
 #endif // ENABLE_DISPLAY
