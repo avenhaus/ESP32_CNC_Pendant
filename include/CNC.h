@@ -2,7 +2,7 @@
 #define _CNC_H_
 
 #include "Arduino.h"
-
+#include "VUEF.h"
 
 /* ============================================== *\
  * Axis
@@ -62,6 +62,8 @@ typedef enum CncMachineTypeEnum {CMT_UNKNOWN, CMT_GRBL, CMT_FLUIDNC} CncMachineT
 extern ConfigEnum configCncMachineType;
 void cncSetCncMachineType(CncMachineTypeEnum type);
 
+
+
 extern StateFloat stateCncFeed;
 extern StateFloat stateCncFeedOverride;
 extern StateFloat stateCncRapidsOverride;
@@ -79,6 +81,15 @@ extern uint32_t cncCmdCnt;
 extern uint32_t cncResponseCnt;
 extern bool cncResponseError;
 
+extern const char* CNC_CMD_ALARM_RESET;
+extern const char* CNC_CMD_CONTROL_START;
+extern const char* CNC_CMD_CONTROL_PAUSE;
+extern const char* CNC_CMD_CONTROL_RESET;
+extern const char* CNC_CMD_HOME_ALL;
+extern const char* CNC_CMD_ZERO_ALL;
+extern const char* CNC_CMD_ZERO_XYZ;
+extern const char* CNC_CMD_RESTART;
+
 
 /* ============================================== *\
  * Constants
@@ -89,5 +100,4 @@ extern bool cncResponseError;
 #define CNC_CMD_TIMEOUT_MS 3000
 #define CNC_STATUS_TIMEOUT_MS 500
 
-
-#endif // _BATTERY_H_
+#endif // _CNC_H_

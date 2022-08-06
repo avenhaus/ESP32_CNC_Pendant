@@ -24,7 +24,12 @@
 (1) Zero
 (1) Spindle
 (1) Mist
- Lock
+(1) Lock
+(1) Menu
+(1) Probe
+(1) Home
+(2) Macro
+(2) Files
 
 */
 

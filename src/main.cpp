@@ -108,12 +108,12 @@ void loop() {
 
   int steps = encoderMain.getChagne();
   if (steps) { cncJogAxis(steps); }
-  steps = encoderLeft.getChagne();
+  steps = encoderRight.getChagne();
   if (steps) { 
-    if (EX_INPUT(LEFT_ENCODER1_BUTTON_BIT)) { cncIncSettingsEncoder(steps); }
+    if (EX_INPUT(RIGHT_ENCODER1_BUTTON_BIT)) { cncIncSettingsEncoder(steps); }
     else { cncChangeSettingsEncoderMode(steps); }
   }
-  steps = encoderRight.getChagne();
+  steps = encoderLeft.getChagne();
   if (steps) { cncIncActiveAxis(steps); }
   
   if (extended_inputs != extended_inputs_debounce) { 
@@ -125,7 +125,7 @@ void loop() {
     uint32_t justPressed = (extended_inputs ^ extended_inputs_last) & ~extended_inputs;
     if (justPressed) {
       DEBUG_printf(FST("Pressed: %04X\n"), justPressed);
-      if (justPressed & (1 << RIGHT_ENCODER1_BUTTON_BIT)) { cncAxisEncoderPress(); }
+      if (justPressed & (1 << LEFT_ENCODER1_BUTTON_BIT)) { cncAxisEncoderPress(); }
     }
 
     float jjMode = !EX_INPUT(SLOW_BUTTON_BIT) ? 0.01 : 0.1;

@@ -161,6 +161,7 @@ CncAxis cncAxis[CNC_MAX_AXES] = {
     CncAxis(FST("C Axis"), CNC_AXIS_C, 'C',  10.0,  100.0,  1.0,  500.0, 100.0),
 };
 
+
 const ConfigEnum::Option configCncMachineTypeOptions[] PROGMEM = {
   { "Unknown", CMT_UNKNOWN },
   { "GRBL", CMT_GRBL },
@@ -170,7 +171,10 @@ const size_t configCncMachineTypeOptionsSize = sizeof(configCncMachineTypeOption
 ConfigEnum configCncMachineType(FST("CNC Type"), configCncMachineTypeOptions, configCncMachineTypeOptionsSize, CMT_UNKNOWN, FST("Unknown/GRBL/FluidNC"), 0, &configGroupCNC);
 
 
-const char* CNC_CMD_RESET = FST("$X");
+const char* CNC_CMD_ALARM_RESET = FST("$X");
+const char* CNC_CMD_CONTROL_START = FST("~");
+const char* CNC_CMD_CONTROL_PAUSE = FST("!");
+const char* CNC_CMD_CONTROL_RESET = FST("\x18");
 const char* CNC_CMD_HOME_ALL = FST("$H");
 const char* CNC_CMD_ZERO_ALL = FST("G10 L20 P0 X0 Y0 Z0 A0");
 const char* CNC_CMD_RESTART = FST("$Bye");
@@ -181,9 +185,9 @@ const char * _buttonCmd[] = {
     nullptr, // UIB_FILES
     nullptr, // UIB_SETTINGS
     nullptr, // UIB_HELP
-    nullptr, // UIB_PLAY
-    nullptr, // UIB_PAUSE
-    nullptr, // UIB_STOP
+    CNC_CMD_CONTROL_START, // UIB_PLAY
+    CNC_CMD_CONTROL_PAUSE, // UIB_PAUSE
+    CNC_CMD_CONTROL_RESET, // UIB_STOP
     nullptr, // UIB_SPINDLE
     nullptr, // UIB_FLOOD
     nullptr, // UIB_MIST 
@@ -337,7 +341,7 @@ void cncAxisEncoderPress() {
 
 static void _cncResetAlarm(lv_event_t * e) {
     DEBUG_println(FST("Reset Alarm"));
-    cncSend(CNC_CMD_RESET);
+    cncSend(CNC_CMD_ALARM_RESET);
 }
 
 static void _cncSetAxisZeroEvent(lv_event_t * e) {
@@ -431,12 +435,12 @@ void cncRun(uint32_t now) {
                 cncStream->write('?');
                 // DEBUG_println(FST("Check Status"));
             }
-
-            if (_cncCmdSentTs > _cncCmdResponseTs && now > _cncCmdSentTs + CNC_CMD_TIMEOUT_MS) {
+            
+            /*if (_cncCmdSentTs > _cncCmdResponseTs && now > _cncCmdSentTs + CNC_CMD_TIMEOUT_MS) {
                 DEBUG_println(FST("Timed out waiting for CMD response"));
                 cncSetConnectionState(CCS_TIMEOUT);
                 cncSetState(CS_TIMEOUT);
-            }
+            } */
 
             if (_cncStatusCheckTs > _cncStatusResponseTs && now > _cncStatusCheckTs + CNC_STATUS_TIMEOUT_MS) {
                 DEBUG_println(FST("Timed out waiting for Status response"));
