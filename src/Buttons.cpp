@@ -83,10 +83,10 @@ const ConfigEnum::Option configButtonFunctionOptions[] PROGMEM = {
 };
 const size_t configButtonFunctionOptionsSize = sizeof(configButtonFunctionOptions) / sizeof(ConfigEnum::Option);
 const char* _cncButtonHelp = FST("Function that is executed when this button is pressed.");
-ConfigEnum configButtonLY(FST("Left Yellow"), configButtonFunctionOptions, configButtonFunctionOptionsSize, 1, _cncButtonHelp, 0, &configGroupButtons);
-ConfigEnum configButtonLB(FST("Left Blue"), configButtonFunctionOptions, configButtonFunctionOptionsSize, 1, _cncButtonHelp, 0, &configGroupButtons);
-ConfigEnum configButtonLR(FST("Left Red"), configButtonFunctionOptions, configButtonFunctionOptionsSize, 1, _cncButtonHelp, 0, &configGroupButtons);
-ConfigEnum configButtonLG(FST("Left Green"), configButtonFunctionOptions, configButtonFunctionOptionsSize, 1, _cncButtonHelp, 0, &configGroupButtons);
+ConfigEnum configButtonLY(FST("Left Yellow"), configButtonFunctionOptions, configButtonFunctionOptionsSize, CBF_NONE, _cncButtonHelp, 0, &configGroupButtons);
+ConfigEnum configButtonLB(FST("Left Blue"), configButtonFunctionOptions, configButtonFunctionOptionsSize, CBF_NONE, _cncButtonHelp, 0, &configGroupButtons);
+ConfigEnum configButtonLR(FST("Left Red"), configButtonFunctionOptions, configButtonFunctionOptionsSize, CBF_NONE, _cncButtonHelp, 0, &configGroupButtons);
+ConfigEnum configButtonLG(FST("Left Green"), configButtonFunctionOptions, configButtonFunctionOptionsSize, CBF_NONE, _cncButtonHelp, 0, &configGroupButtons);
 
 const char * _uiButtonCmd[] = {
     CNC_CMD_HOME_ALL, // UIB_HOME

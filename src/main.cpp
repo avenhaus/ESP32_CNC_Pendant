@@ -12,6 +12,7 @@
 
 // #include <ESP32Encoder.h>
 
+void tcpClientRun(uint32_t now);
 
 void extendedInputSetup();
 uint32_t getExtendedInputs();

@@ -49,7 +49,7 @@ void uiMainScreenInit(void) {
     lv_obj_set_style_shadow_spread(uiMessageToast, 4, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_pad_ver(uiMessageToast, 4, LV_PART_MAIN | LV_STATE_DEFAULT);    
     lv_obj_set_style_pad_hor(uiMessageToast, 10, LV_PART_MAIN | LV_STATE_DEFAULT);    
-    lv_obj_set_style_text_font(uiMessageToast, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(uiMessageToast, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_add_flag(uiMessageToast, LV_OBJ_FLAG_HIDDEN);
 
     uiErrorToast = lv_label_create(uiMainScreen);

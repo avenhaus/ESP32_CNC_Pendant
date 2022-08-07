@@ -2,12 +2,21 @@
 #include <string.h>
 #include "Config.h"
 #include "VUEF.h"
+//#include "BluetoothSerial.h"
 #include "ui.h"
 #include "uiHelper.h"
 #include "CNC.h"
 #include <algorithm> 
 // http://fluidnc.local/  192.168.0.184
 // http://grblesp.local/
+
+
+#if ENABLE_WIFI
+#include "TcpServer.h"
+TcpConnection cncTcpConnection;
+static uint32_t _tcpConnectRetryTS = 0;
+#endif
+
 
 
 const char* _axisInfoCmd[] PROGMEM = {
@@ -19,8 +28,12 @@ const char* _axisInfoCmd[] PROGMEM = {
 const int _AXIS_INFO_CMD_CNT = sizeof(_axisInfoCmd) / sizeof(char*);
 
 void parseGrblResponse(const char* line);
+void tcpClientRun(uint32_t now);
+extern TcpConnection cncTcpConnection;
 
-Stream* cncStream = &Serial2;
+//BluetoothSerial SerialBT;
+
+Stream* cncStream = nullptr;
 uint32_t _cncCmdSentTs = 0;
 uint32_t _cncCmdResponseTs = 0;
 uint32_t _cncStatusCheckTs = 0;
@@ -44,24 +57,25 @@ int _cncBufferedJogSteps = 0;
 char cncStreamReadBuffer[CNC_STREAM_BUFFER_SIZE];
 size_t cncStreamReadBufferIndex = 0;
 
-const char* PROGMEM CNC_HOST = "http://fluidnc.local/";
+const char* PROGMEM CNC_HOST = "fluidnc.local";
 
 RegGroup configGroupCNC(FST("CNC"));
 ConfigUInt32 configUart2Speed(FST("Baud"), 115200, FST("UART2 Speed"), 0, &configGroupCNC);
 ConfigUInt32 configCheckStatusInterval(FST("Status Check"), 1000, FST("Check CNC status interval"), 0, &configGroupCNC);
-ConfigStr configCncHost(FST("Host"), 32, CNC_HOST, FST("CNC"), 0, &configGroupCNC);
+ConfigStr configCncHost(FST("Host"), 32, CNC_HOST, FST("CNC host name"), 0, &configGroupCNC);
+ConfigUInt16 configCncPort(FST("Port"), 23, FST("CNC TCP port number"), 0, &configGroupCNC);
 ConfigUInt8 configAxesCount(FST("Axes"), 4, FST("Number of axes"), 0, &configGroupCNC);
 
 ConfigUInt32 configShowMessageToastMs(FST("Message Toast ms"), 5000, FST("How long a message is displayed on screen."), 0, &configGroupCNC);
 ConfigUInt32 configShowErrorToastMs(FST("Error Toast ms"), 5000, FST("How long an error message is displayed on screen."), 0, &configGroupCNC);
 
-typedef enum CncConnectionTypeEnum {CCT_NONE, CCT_WIFI, CCT_BT, CCT_UART, CCT_USB } CncConnectionTypeEnum;
 const ConfigEnum::Option configCncConnectionTypeOptions[] PROGMEM = {
   { "None", CCT_NONE },
   { "WIFI", CCT_WIFI },
-  { "BT", CCT_BT },
+  // { "Bluetooth", CCT_BT },
   { "UART", CCT_UART },
-  { "USB", CCT_USB }
+  { "USB", CCT_USB },
+  //{ "ESP-NOW", CCT_ESP_NOW }
 };
 const size_t configCncConnectionTypeOptionsSize = sizeof(configCncConnectionTypeOptions) / sizeof(ConfigEnum::Option);
 ConfigEnum configCncConnectionType(FST("Connection Type"), configCncConnectionTypeOptions, configCncConnectionTypeOptionsSize, CCT_UART, FST("None/WIFI/BT/UART/USB"), 0, &configGroupCNC);
@@ -267,6 +281,21 @@ bool _cncJoyJog() {
     return total_feed;
 }
 
+#if ENABLE_WIFI
+// TODO: Turn this into background task
+void tcpClientRun(uint32_t now) {
+    if (now > _tcpConnectRetryTS && !cncTcpConnection.isConnected()) {
+        _tcpConnectRetryTS = now + 5000;
+        DEBUG_printf(FST("Connecting to %s:%d\n"), configCncHost.get(), configCncPort.get());
+        if (cncTcpConnection.connect(configCncHost.get(), configCncPort.get(), 3000) != TcpConnection::Accepted) {
+            DEBUG_printf(FST("Could not connect to CNC %s:%d\n"), configCncHost.get(), configCncPort.get());
+            return;
+        } 
+        DEBUG_println(FST("CNC connected via TCP"));
+    }    
+}
+#endif
+
 
 void _readCncStream() {
   if (!cncStream) { return; }
@@ -337,8 +366,45 @@ void _showCurrentAxisSettings() {
     lv_label_set_text(uiPanelSettingsJogFeed.text, buffer);
 }
 
+void setCncConnection() {
+    DEBUG_printf(FST("CNC connection type: %s\n"), configCncConnectionType.getText());
+    switch((CncConnectionTypeEnum) configCncConnectionType.get()) {
+        case CCT_NONE:
+            cncStream = nullptr;
+            break;
+
+        case CCT_USB: 
+            cncStream = &Serial;
+            break;
+
+        case CCT_UART: 
+            Serial2.begin(configUart2Speed.get(), SERIAL_8N1, UART2_RXD, UART2_TXD);
+            cncStream = &Serial2;
+            break;
+
+#if ENABLE_WIFI
+        case CCT_WIFI:
+            cncStream = &cncTcpConnection;
+            break;
+#endif
+
+        /*case CCT_BT:
+            SerialBT.begin(FST("ESP32Pendant"));
+            cncStream = &SerialBT;
+            break;*/
+
+        case CCT_ESP_NOW:
+
+        default:
+            DEBUG_printf(FST("Unknown connection type: %d\n"), configCncConnectionType.get());
+            cncStream = nullptr;
+    }
+}
+
 void cncInit() {
-    Serial2.begin(115200, SERIAL_8N1, UART2_RXD, UART2_TXD);
+
+    setCncConnection();
+
     uiHighlightAxis(configCncCurrentAxis.get() - 1);
     uiHighlightCncSetting((int)cncSettingsEncoderMode - 1);
 
@@ -363,6 +429,7 @@ void cncRun(uint32_t now) {
     if (now == 0) { now = millis(); }
 
     if (cncStream) {
+        if (configCncConnectionType.get() == CCT_WIFI) { tcpClientRun(now); }
         _readCncStream();
 
         static uint32_t _getConfigRetryTs = 0;

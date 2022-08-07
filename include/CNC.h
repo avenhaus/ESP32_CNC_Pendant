@@ -45,6 +45,9 @@ void cncJogAxis(int32_t steps);
 
 void cncAxisEncoderPress();
 
+typedef enum CncConnectionTypeEnum {CCT_NONE, CCT_WIFI, CCT_BT, CCT_UART, CCT_USB, CCT_ESP_NOW} CncConnectionTypeEnum;
+extern const size_t configCncConnectionTypeOptionsSize;
+extern ConfigEnum configCncConnectionType;
 
 typedef enum CncSettingsEncoderMode { CSEM_NONE, CSEM_JOG_STEP, CSEM_JOG_FEED, CSEM_FEED_OVERRIDE, CSEM_RAPIDS_OVERRIDE, CSEM_SPEED_OVERRIDE, CSEM_MAX } CncSettingsEncoderMode;
 void cncIncSettingsEncoder(int32_t steps);

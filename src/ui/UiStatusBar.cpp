@@ -35,7 +35,7 @@ lv_obj_t* uiCreateStatusBar(lv_obj_t* parent) {
     lv_obj_set_style_pad_right(uiStatusBar, 2, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_pad_top(uiStatusBar, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_pad_bottom(uiStatusBar, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(uiStatusBar, &lv_font_montserrat_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(uiStatusBar, &lv_font_montserrat_18, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // uiStatusBarIpAddr
     uiStatusBarLocalIpAddr = lv_label_create(uiStatusBar);
