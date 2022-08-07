@@ -115,7 +115,7 @@ GPIO_34 - GPIO_39 have no internal pullup / pulldown.
 
 #define ADC_VREF 1100
 
-#define BATTERY_PIN 34
+#define BATTERY_PIN -1 // 34
 
 #define L_JOY_X_PIN 32 
 #define L_JOY_Y_PIN 33 

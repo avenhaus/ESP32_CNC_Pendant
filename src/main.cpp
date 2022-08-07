@@ -8,6 +8,7 @@
 #include "Encoder.h"
 #include "CNC.h"
 #include "Buttons.h"
+#include "Ui.h"
 
 // #include <ESP32Encoder.h>
 
@@ -163,12 +164,20 @@ void loop() {
 
   #if BATTERY_PIN >= 0 
   batteryRun(now);
+  if (now % 100 == 0) {
+    char buffer[64];
+    sprintf(buffer, "%d - %.3f", batteryChargeLevel, batteryVoltage);
+    lv_label_set_text(uiStatusBarLocalIpAddr, buffer);
+  }
+
+  /*
   if (batteryChargeLevel <= 2 && (batteryVoltage > -1.0)) {
     DEBUG_println(FST("Battery is low!"));
     //shutdown();
     Serial.flush(); 
     esp_deep_sleep_start();
   }
+  */
   #endif
 
   vTaskDelay(1);

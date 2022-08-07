@@ -21,7 +21,7 @@
 
 #define ENABLE_WIFI 1
 #define ENABLE_OTA 0
-#define ENABLE_TELNET 0
+#define ENABLE_TELNET 1
 #define ENABLE_WEB_SERVER 1
 #define WEBUI_TABS "control,settings,files,wizard"
 #define WEBUI_START_TAB "settings"
