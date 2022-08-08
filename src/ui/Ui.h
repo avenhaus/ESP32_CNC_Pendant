@@ -85,6 +85,8 @@ void showMessageToast(const char* text, uint32_t timeMs=0);
 void hideMessageToast();
 void showErrorToast(const char* text, uint32_t timeMs=0);
 void hideErrorToast();
+extern lv_obj_t* uiEmergencyStopToast;
+extern lv_obj_t* uiInputLockToast;
 
 
 /* ============================================== *\

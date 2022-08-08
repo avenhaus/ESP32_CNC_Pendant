@@ -42,7 +42,7 @@ void _cncSetState(const char* token) {
     else if (!strcasecmp(token, FST("Sleep"))) { cncSetState(CS_SLEEP); }
     else {
         cncSetState(CS_UNKNOWN);
-        DEBUG_printf(FST("Unknown CNC state: %s\n"), token);
+        DEBUG_printf(FST("Unknown CNC state: '%s'\n"), token);
     }
 }
 
@@ -117,7 +117,7 @@ void _grblHandleStatusLine(const char* line) {
     _cncStatusResponseTs = millis();
     size_t n = 0;
     size_t i = 0;
-    typedef enum CncReadStateEnum {PS_START, PS_STATE, PS_MPOS, PS_FS, PS_OV, PS_WCO, PS_PN, PS_DONE } CncReadStateEnum;
+    typedef enum CncReadStateEnum {PS_START, PS_STATE, PS_STATE_DONE, PS_MPOS, PS_FS, PS_OV, PS_WCO, PS_PN, PS_DONE } CncReadStateEnum;
     CncReadStateEnum state = PS_START;
     size_t p = 0;
     bool gotPinStates = false;
@@ -129,6 +129,11 @@ void _grblHandleStatusLine(const char* line) {
         char sep = token[i-1];
         if (i > 1) { token[i-1] = '\0'; }
         if (!strcmp(token, FST("<"))) { state = PS_STATE; }
+        else if (state == PS_STATE) { 
+            _cncSetState(token);
+            if (sep == ':') { i += _readCncToken(line+n+i, token, sizeof(token), _grblStatusTerm); }
+            state = PS_STATE_DONE;
+        }
         else if (sep == ':') {
             if (!strcmp(token, FST("MPos"))) { state = PS_MPOS; }
             else if (!strcmp(token, FST("WCO"))) { state = PS_WCO; }
@@ -137,7 +142,6 @@ void _grblHandleStatusLine(const char* line) {
             else if (!strcmp(token, FST("Pn"))) { state = PS_PN; }
             else { DEBUG_printf(FST("Unknown CNC info token: %s\n"), token); }
         }
-        else if (state == PS_STATE) { _cncSetState(token); }
         else if (state == PS_MPOS) {
             if (p < CNC_AXIS_MAX-1) { 
                 cncAxis[p].machinePos.set(atof(token));

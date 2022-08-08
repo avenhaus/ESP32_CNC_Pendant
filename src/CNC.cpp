@@ -17,8 +17,6 @@ TcpConnection cncTcpConnection;
 static uint32_t _tcpConnectRetryTS = 0;
 #endif
 
-
-
 const char* _axisInfoCmd[] PROGMEM = {
     "max_rate_mm_per_min",
     "max_travel_mm",
@@ -39,6 +37,7 @@ uint32_t _cncCmdResponseTs = 0;
 uint32_t _cncStatusCheckTs = 0;
 uint32_t _cncStatusResponseTs = 0;
 uint32_t _joyJogNextTs = 0;
+uint32_t _emergencyStopTs = 0;
 bool _isJoyJogging = false;
 
 uint32_t _cncGetConfigTs = 0;
@@ -140,7 +139,7 @@ int32_t cncStateColor[] = {
   0x10B050, // CS_HOMING
   0x10B010, // CS_RUN
   0x10B060, // CS_JOG
-  0xB06010, // CS_HOLD
+  0xA0A010, // CS_HOLD
   0xB07030, // CS_DOOR
   0x4040A0  // CS_SLEEP
 };
@@ -430,6 +429,14 @@ void cncRun(uint32_t now) {
 
     if (cncStream) {
         if (configCncConnectionType.get() == CCT_WIFI) { tcpClientRun(now); }
+
+#if EMERGENCY_STOP_BIT >= 0
+        extern uint32_t extended_inputs;
+        if (extended_inputs & (1<<EMERGENCY_STOP_BIT) && now > _emergencyStopTs) {
+            cncSend(CNC_CMD_CONTROL_RESET);
+            _emergencyStopTs = now + 500;
+        }
+#endif        
         _readCncStream();
 
         static uint32_t _getConfigRetryTs = 0;

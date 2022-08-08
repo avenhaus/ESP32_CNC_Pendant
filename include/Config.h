@@ -136,8 +136,20 @@ GPIO_34 - GPIO_39 have no internal pullup / pulldown.
 #define RIGHT_ENCODER1_B_BIT 15
 #define RIGHT_ENCODER1_BUTTON_BIT 13
 
-#define SLOW_BUTTON_BIT 11
-#define FAST_BUTTON_BIT 12
+#define FAST_BUTTON_BIT 11
+#define SLOW_BUTTON_BIT 12
+
+#define INPUT_LOCK_BIT 5
+#define EMERGENCY_STOP_BIT 3
+
+#define LEFT_GREEN_BUTTON_BIT 1
+#define LEFT_YELLOW_BUTTON_BIT 7
+#define LEFT_BLUE_BUTTON_BIT 6
+#define RIGHT_BLACK_BUTTON_BIT 4
+#define RIGHT_YELLOW_BUTTON_BIT 2
+#define LRIGHT_BLUE_BUTTON_BIT 0
+
+
 
 #define EX_INPUT(BIT) (BIT < 0 ? 0 : (extended_inputs >> BIT) & 1)
 

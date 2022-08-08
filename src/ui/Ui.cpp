@@ -4,9 +4,11 @@
 /* ============================================== *\
  * Variables
 \* ============================================== */
-lv_obj_t * uiMainScreen;
-lv_obj_t * uiMessageToast;
-lv_obj_t * uiErrorToast;
+lv_obj_t* uiMainScreen;
+lv_obj_t* uiMessageToast;
+lv_obj_t* uiErrorToast;
+lv_obj_t* uiEmergencyStopToast;
+lv_obj_t* uiInputLockToast;
 
 static uint32_t _hideMessageToastTs = 0;
 static uint32_t _hideErrorToastTs = 0;
@@ -32,6 +34,25 @@ void uiMainScreenInit(void) {
     uiCreatePanelSettings(uiMainScreen, 5, 183);
     uiCreateButtons(uiMainScreen, 378, 181);
     uiCreateKeyboard(uiMainScreen);
+
+    uiInputLockToast = lv_label_create(uiMainScreen);
+    lv_obj_set_size(uiInputLockToast, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_pos(uiInputLockToast, 0, -6);
+    lv_obj_set_align(uiInputLockToast, LV_ALIGN_BOTTOM_MID);
+    lv_label_set_text(uiInputLockToast, FST("Input Lock"));
+    lv_obj_set_style_text_align(uiInputLockToast, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(uiInputLockToast, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(uiInputLockToast, lv_color_hex(0xFFD020), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(uiInputLockToast, lv_color_hex(0x604000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(uiInputLockToast, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_color(uiInputLockToast, lv_color_hex(0xF0D020), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_opa(uiInputLockToast, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(uiInputLockToast, 6, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_spread(uiInputLockToast, 4, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_ver(uiInputLockToast, 4, LV_PART_MAIN | LV_STATE_DEFAULT);    
+    lv_obj_set_style_pad_hor(uiInputLockToast, 10, LV_PART_MAIN | LV_STATE_DEFAULT);    
+    lv_obj_set_style_text_font(uiInputLockToast, &lv_font_montserrat_22, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_add_flag(uiInputLockToast, LV_OBJ_FLAG_HIDDEN);
 
     uiMessageToast = lv_label_create(uiMainScreen);
     lv_obj_set_size(uiMessageToast, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
@@ -70,6 +91,25 @@ void uiMainScreenInit(void) {
     lv_obj_set_style_pad_hor(uiErrorToast, 10, LV_PART_MAIN | LV_STATE_DEFAULT);    
     lv_obj_set_style_text_font(uiErrorToast, &lv_font_montserrat_22, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_add_flag(uiErrorToast, LV_OBJ_FLAG_HIDDEN);
+
+    uiEmergencyStopToast = lv_label_create(uiMainScreen);
+    lv_obj_set_size(uiEmergencyStopToast, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_pos(uiEmergencyStopToast, 0, -80);
+    lv_obj_set_align(uiEmergencyStopToast, LV_ALIGN_CENTER);
+    lv_label_set_text(uiEmergencyStopToast, FST("Emergency Stop!"));
+    lv_obj_set_style_text_align(uiEmergencyStopToast, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(uiEmergencyStopToast, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(uiEmergencyStopToast, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(uiEmergencyStopToast, lv_color_hex(0xA01010), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(uiEmergencyStopToast, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_color(uiEmergencyStopToast, lv_color_hex(0xF04040), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_opa(uiEmergencyStopToast, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(uiEmergencyStopToast, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_spread(uiEmergencyStopToast, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_ver(uiEmergencyStopToast, 10, LV_PART_MAIN | LV_STATE_DEFAULT);    
+    lv_obj_set_style_pad_hor(uiEmergencyStopToast, 20, LV_PART_MAIN | LV_STATE_DEFAULT);    
+    lv_obj_set_style_text_font(uiEmergencyStopToast, &lv_font_montserrat_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_add_flag(uiEmergencyStopToast, LV_OBJ_FLAG_HIDDEN);
 }
 
 void uiInit(void) {

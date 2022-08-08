@@ -19,6 +19,7 @@ uint32_t getExtendedInputs();
 extern uint32_t extended_inputs;
 uint32_t extended_inputs_last = 0;
 uint32_t extended_inputs_debounce = 0;
+bool _isInputLocked = false;
 
 // ESP32Encoder encoderMainDial;
 Encoder encoderMain;
@@ -111,14 +112,14 @@ void loop() {
   #endif
 
   int steps = encoderMain.getChagne();
-  if (steps) { cncJogAxis(steps); }
+  if (steps) { cncJogAxis(-steps); }
   steps = encoderRight.getChagne();
   if (steps) { 
     if (EX_INPUT(RIGHT_ENCODER1_BUTTON_BIT)) { cncIncSettingsEncoder(steps); }
     else { cncChangeSettingsEncoderMode(steps); }
   }
   steps = encoderLeft.getChagne();
-  if (steps) { cncIncActiveAxis(steps); }
+  if (steps) { cncIncActiveAxis(-steps); }
   
   if (extended_inputs != extended_inputs_debounce) { 
     inputSameCount = 0;
@@ -126,10 +127,41 @@ void loop() {
   }
   else { inputSameCount++; }
   if (inputSameCount == 5) { // Simple debounce
-    uint32_t justPressed = (extended_inputs ^ extended_inputs_last) & ~extended_inputs;
+    uint32_t changed = extended_inputs ^ extended_inputs_last;
+    uint32_t justPressed = changed & ~extended_inputs;
+  
+#if EMERGENCY_STOP_BIT >= 0
+    if (changed & (1 << EMERGENCY_STOP_BIT)) {
+      if (extended_inputs & (1 << EMERGENCY_STOP_BIT)) {
+        lv_obj_clear_flag(uiEmergencyStopToast, LV_OBJ_FLAG_HIDDEN); 
+      } else { lv_obj_add_flag(uiEmergencyStopToast, LV_OBJ_FLAG_HIDDEN); }
+    }
+#endif
+
+#if INPUT_LOCK_BIT >= 0
+    _isInputLocked = extended_inputs & (1 << INPUT_LOCK_BIT);
+    if (changed & (1 << INPUT_LOCK_BIT)) {
+      if (_isInputLocked) {
+        lv_obj_clear_flag(uiInputLockToast, LV_OBJ_FLAG_HIDDEN); 
+      } else { lv_obj_add_flag(uiInputLockToast, LV_OBJ_FLAG_HIDDEN); }
+    }
+#endif
+
     if (justPressed) {
       DEBUG_printf(FST("Pressed: %04X\n"), justPressed);
       if (justPressed & (1 << LEFT_ENCODER1_BUTTON_BIT)) { cncAxisEncoderPress(); }
+      if (LEFT_GREEN_BUTTON_BIT >= 0 && justPressed & (1 << LEFT_GREEN_BUTTON_BIT)) { 
+         showMessageToast(FST("Start"), 3000);
+         cncSend(CNC_CMD_CONTROL_START);
+      }
+      if (LEFT_YELLOW_BUTTON_BIT >= 0 && justPressed & (1 << LEFT_YELLOW_BUTTON_BIT)) { 
+         showMessageToast(FST("Pause")), 3000;
+         cncSend(CNC_CMD_CONTROL_PAUSE);
+      }
+      if (LEFT_BLUE_BUTTON_BIT >= 0 && justPressed & (1 << LEFT_BLUE_BUTTON_BIT)) { 
+         showMessageToast(FST("Home All"), 3000);
+         cncSend(CNC_CMD_HOME_ALL);
+      }
     }
 
     float jjMode = !EX_INPUT(SLOW_BUTTON_BIT) ? 0.01 : 0.1;
