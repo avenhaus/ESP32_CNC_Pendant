@@ -15,6 +15,7 @@
 #include "TcpServer.h"
 TcpConnection cncTcpConnection;
 static uint32_t _tcpConnectRetryTS = 0;
+void tcpClientRun(uint32_t now);
 #endif
 
 const char* _axisInfoCmd[] PROGMEM = {
@@ -26,8 +27,6 @@ const char* _axisInfoCmd[] PROGMEM = {
 const int _AXIS_INFO_CMD_CNT = sizeof(_axisInfoCmd) / sizeof(char*);
 
 void parseGrblResponse(const char* line);
-void tcpClientRun(uint32_t now);
-extern TcpConnection cncTcpConnection;
 
 //BluetoothSerial SerialBT;
 
@@ -447,7 +446,9 @@ void cncInit() {
 void cncRun(uint32_t now) {
     if (now == 0) { now = millis(); }
 
+#if ENABLE_WIFI
     if (cncStream == &cncTcpConnection) { tcpClientRun(now); }
+#endif
 
     if (cncStream && _isStreamConnected) {
         

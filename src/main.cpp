@@ -108,7 +108,7 @@ adcInit();
 void loop() {
   uint32_t now = millis();
   vuefRun(now);
-  cncRun(now);
+  //cncRun(now);
   #if ENABLE_DISPLAY
   guiRun(now);
   #endif

@@ -357,8 +357,11 @@ void guiRun(uint32_t now) {
     time_t nowTS = 0;
     time(&nowTS);
     char buffer[32];
-    // strftime(buffer, sizeof(buffer), FST("%H:%M:%S"), localtime(&nowTS));
+  #if ENABLE_WIFI  
     strftime(buffer, sizeof(buffer), configTimeFormat.get(), localtime(&nowTS));
+  #else
+    strftime(buffer, sizeof(buffer), FST("%H:%M:%S"), localtime(&nowTS));
+  #endif
     lv_label_set_text(uiStatusBarTime, buffer);
   }
 }
