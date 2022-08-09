@@ -39,6 +39,7 @@ uint32_t _cncStatusResponseTs = 0;
 uint32_t _joyJogNextTs = 0;
 uint32_t _emergencyStopTs = 0;
 bool _isJoyJogging = false;
+bool _isStreamConnected = false;
 
 uint32_t _cncGetConfigTs = 0;
 uint32_t _cncGetConfigState = 0;
@@ -85,7 +86,8 @@ const StateEnum::Option stateCncConnectionStateOptions[] PROGMEM = {
   { "Get Config", CCS_GET_CONFIG },
   { "Connected", CCS_CONNECTED },
   { "Timeout", CCS_TIMEOUT },
-  { "Error", CCS_ERROR }
+  { "Error", CCS_ERROR },
+  { "Connection Lost", CCS_CONNECTION_LOST }
 };
 const size_t stateCncConnectionStateOptionsSize = sizeof(stateCncConnectionStateOptions) / sizeof(StateEnum::Option);
 StateEnum stateCncConnectionState(FST("Connection State"), stateCncConnectionStateOptions, stateCncConnectionStateOptionsSize, CCS_UNKNOWN, 0, 0, &configGroupCNC);
@@ -97,6 +99,7 @@ int32_t cncConnectionStateColor[] = {
   0x40FF40, // CCS_CONNECTED
   0xFF4040, // CCS_TIMEOUT
   0xFF4040, // CCS_ERROR
+  0xFF4040, // CCS_CONNECTION_LOST
 };
 
 const ConfigEnum::Option configCncCurrentAxisOptions[] PROGMEM = {
@@ -189,7 +192,6 @@ ConfigEnum configCncMachineType(FST("CNC Type"), configCncMachineTypeOptions, co
  * CNC Commands
 \*==========================================================*/
 
-
 const char* CNC_CMD_ALARM_RESET = FST("$X");
 const char* CNC_CMD_CONTROL_START = FST("~");
 const char* CNC_CMD_CONTROL_PAUSE = FST("!");
@@ -227,6 +229,7 @@ void cncSendCmdJog(CncAxisEnum axis, float speed, float distance) {
 
 void cncSetConnectionState(CncConnectionStateEnum state) {
     stateCncConnectionState.set(state);
+    DEBUG_printf(FST("Connection state: %s\n"), stateCncConnectionState.getText());
     uiUpdateLabel(uiStatusBarState, stateCncConnectionState.getText(), cncConnectionStateColor[state]);
 }
 
@@ -283,22 +286,32 @@ bool _cncJoyJog() {
 #if ENABLE_WIFI
 // TODO: Turn this into background task
 void tcpClientRun(uint32_t now) {
+    if (_isStreamConnected && !cncTcpConnection.isConnected()) {
+        cncSetConnectionState(CCS_CONNECTION_LOST);
+    }
     if (now > _tcpConnectRetryTS && !cncTcpConnection.isConnected()) {
-        _tcpConnectRetryTS = now + 5000;
+        _tcpConnectRetryTS = now + 3000;
         DEBUG_printf(FST("Connecting to %s:%d\n"), configCncHost.get(), configCncPort.get());
         if (cncTcpConnection.connect(configCncHost.get(), configCncPort.get(), 3000) != TcpConnection::Accepted) {
             DEBUG_printf(FST("Could not connect to CNC %s:%d\n"), configCncHost.get(), configCncPort.get());
+            _isStreamConnected = false;
             return;
         } 
         DEBUG_println(FST("CNC connected via TCP"));
-    }    
+        _isStreamConnected = true;
+        CncConnectionStateEnum state = (CncConnectionStateEnum) stateCncConnectionState.get();
+        if (state != CCS_CONNECTING && state != CCS_GET_CONFIG) {
+            cncSetConnectionState(CCS_CONNECTED);
+        }
+    }
 }
 #endif
 
 
 void _readCncStream() {
-  if (!cncStream) { return; }
-  while (cncStream->available()) {
+  if (!cncStream || !_isStreamConnected) { return; }
+  int available = 0;  
+  while (available = cncStream->available() > 0) {
     char c = cncStream->read();
     if (c == '\n' || c == '\r') { 
         if (cncStreamReadBufferIndex > 0) {
@@ -323,6 +336,9 @@ void _readCncStream() {
     if (cncStreamReadBufferIndex > sizeof(cncStreamReadBuffer)-1) {
       cncStreamReadBufferIndex = sizeof(cncStreamReadBuffer)-1;
     }
+  }
+  if (available < 0 && stateCncConnectionState.get() != CCS_ERROR) {
+    cncSetConnectionState(CCS_ERROR);
   }
 }
 
@@ -370,20 +386,24 @@ void setCncConnection() {
     switch((CncConnectionTypeEnum) configCncConnectionType.get()) {
         case CCT_NONE:
             cncStream = nullptr;
+            _isStreamConnected = false;
             break;
 
         case CCT_USB: 
             cncStream = &Serial;
+            _isStreamConnected = true;
             break;
 
         case CCT_UART: 
             Serial2.begin(configUart2Speed.get(), SERIAL_8N1, UART2_RXD, UART2_TXD);
             cncStream = &Serial2;
+            _isStreamConnected = true;
             break;
 
 #if ENABLE_WIFI
         case CCT_WIFI:
             cncStream = &cncTcpConnection;
+            _isStreamConnected = cncTcpConnection.isConnected();
             break;
 #endif
 
@@ -427,9 +447,10 @@ void cncInit() {
 void cncRun(uint32_t now) {
     if (now == 0) { now = millis(); }
 
-    if (cncStream) {
-        if (configCncConnectionType.get() == CCT_WIFI) { tcpClientRun(now); }
+    if (cncStream == &cncTcpConnection) { tcpClientRun(now); }
 
+    if (cncStream && _isStreamConnected) {
+        
 #if EMERGENCY_STOP_BIT >= 0
         extern uint32_t extended_inputs;
         if (extended_inputs & (1<<EMERGENCY_STOP_BIT) && now > _emergencyStopTs) {

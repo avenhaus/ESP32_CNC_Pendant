@@ -101,6 +101,8 @@ adcInit();
     1,              // Priority of the task.
     NULL,           // Task handle.
     1);             // Core
+
+  DEBUG_println(FST("== Setup Done =="))
 }
 
 void loop() {
