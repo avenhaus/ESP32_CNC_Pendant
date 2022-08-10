@@ -28,13 +28,28 @@
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
 
+// Green LED is used to drop battery voltage by 1.7V so we can safely measure up to 5V.
+// Experimental readings:
+//
+// In    V-Pin  Raw
+// ----------------
+// 4.8V  3.1V  3950
+// 4.5V  2.8V  3320
+// 4.0V  2.3V  2600
+// 3.5V  1.8V  2000
+// 3.0V  1.3V  1410
+// 2.5V  0.82V  820
+// 2.0V  0.36V  262
+
 int batteryRaw = 0;
+float batteryPinVoltage = -1.0;
 float batteryVoltage = -1.0;
 float batteryVoltageFiltered = 0.0;
 int batteryChargeLevel = 0;
 uint32_t batteryReadTs_ = 0;
 
 ConfigUInt32 configAdcVref(FST("ADC VRef"), ADC_VREF, FST("ADC calibration in mV"));
+ConfigFloat configBatteryLedDropV(FST("Bat LED Drop"), BATTERY_LED_DROP_V, FST("Voltage measured across battery LED that drops voltage to safe levels."));
 
 //Characterize ADC at particular atten
 esp_adc_cal_characteristics_t adc1Chars;
@@ -85,11 +100,11 @@ void batteryRun(uint32_t now/*=0*/) {
   if (now < batteryReadTs_ + BATTERY_READ_MS) { return; }
   batteryReadTs_ = now;
   batteryRaw = safeAnalogRead(BATTERY_PIN); 
-  float pinVoltage = esp_adc_cal_raw_to_voltage(batteryRaw, &adc1Chars) * 0.001;
-  batteryVoltage = pinVoltage * BATTERY_CONV_FACTOR;
+  batteryPinVoltage = esp_adc_cal_raw_to_voltage(batteryRaw, &adc1Chars) * 0.001;
+  batteryVoltage = batteryPinVoltage + configBatteryLedDropV.get();
   if (batteryVoltageFiltered == 0.0) { batteryVoltageFiltered = batteryVoltage; }
   else { batteryVoltageFiltered = batteryVoltageFiltered * 0.9 + batteryVoltage * 0.1; }
-  batteryChargeLevel = getLionCellChargeLevel(batteryVoltageFiltered / BATTERY_CELLS);
+  batteryChargeLevel = getLionCellChargeLevel((batteryVoltageFiltered + 0.1) / BATTERY_CELLS);
   // DEBUG_printf(FST("Battery: %d  %.3fV  %.3fV  %.3fV  %d%%\n"), batteryRaw, pinVoltage, batteryVoltage, batteryVoltageFiltered, batteryChargeLevel);
   return;
 }

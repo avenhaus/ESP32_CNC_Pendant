@@ -9,6 +9,7 @@
 #include "CNC.h"
 #include "Buttons.h"
 #include "Ui.h"
+#include "UiHelper.h"
 
 // #include <ESP32Encoder.h>
 
@@ -53,14 +54,15 @@ void _inputTask(void* pvParameters) {
 }
 
 void setup() {
-adcInit();
-  adc2RegSave(); // Save ADC2 registers before WiFi
 
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);  
 
+  // adc2RegSave(); // Save ADC2 registers before WiFi
   
   vuefInit();
+  adcInit();
+
 
   // This must be executed before Display initialization.
   // Otherwise SPI gets messed up for some reason.
@@ -108,7 +110,7 @@ adcInit();
 void loop() {
   uint32_t now = millis();
   vuefRun(now);
-  //cncRun(now);
+  cncRun(now);
   #if ENABLE_DISPLAY
   guiRun(now);
   #endif
@@ -200,19 +202,35 @@ void loop() {
   #if BATTERY_PIN >= 0 
   batteryRun(now);
   if (now % 100 == 0) {
+    /*
     char buffer[64];
-    sprintf(buffer, "%d - %.3f", batteryChargeLevel, batteryVoltage);
-    lv_label_set_text(uiStatusBarLocalIpAddr, buffer);
+    extern int batteryRaw;
+    extern float batteryPinVoltage;
+    sprintf(buffer, FST("  R:%d P:%d VP:%.3f VB:%.3f  "), batteryRaw, batteryChargeLevel, batteryPinVoltage, batteryVoltage);
+    lv_label_set_text(uiStatusBarState, buffer);
+    lv_obj_set_style_bg_color(uiStatusBarState, lv_color_hex(0x000020), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(uiStatusBarState, 255, LV_PART_MAIN | LV_STATE_DEFAULT); 
+    */
+    char text[16];
+    const char* symbol;
+    if (batteryChargeLevel > 80) { symbol= LV_SYMBOL_BATTERY_FULL; }
+    else if (batteryChargeLevel > 60) { symbol= LV_SYMBOL_BATTERY_3; }
+    else if (batteryChargeLevel > 40) { symbol= LV_SYMBOL_BATTERY_2; }
+    else if (batteryChargeLevel > 20) { symbol= LV_SYMBOL_BATTERY_1; }
+    else { symbol= LV_SYMBOL_BATTERY_EMPTY; }
+    uint32_t red = min(255, ((255-0x40) * (100-batteryChargeLevel) * 2) / 100 + 0x40);
+    uint32_t green = min(255, ((255-0x40) * (batteryChargeLevel) * 2) / 100 + 0x40);
+    sprintf(text, "%d %s", batteryChargeLevel, symbol);
+    uiUpdateLabel(uiStatusBarBattery, text, red<<16 | green<<8 | 0x40);
   }
 
-  /*
-  if (batteryChargeLevel <= 2 && (batteryVoltage > -1.0)) {
+  if (batteryChargeLevel <= 3 && (batteryVoltage > -1.0)) {
     DEBUG_println(FST("Battery is low!"));
-    //shutdown();
+    // shutdown();
     Serial.flush(); 
     esp_deep_sleep_start();
   }
-  */
+  
   #endif
 
   vTaskDelay(1);

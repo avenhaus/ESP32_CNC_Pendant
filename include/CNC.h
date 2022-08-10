@@ -31,7 +31,8 @@ public:
     ConfigFloat throttle;
 
     StateFloat machinePos;
-    StateFloat workCoordinate;
+    StateFloat workPos;
+    float workCoordinate;
 };
 
 void cncInit();
@@ -101,6 +102,6 @@ extern const char* CNC_CMD_RESTART;
 #define CNC_RUN_MS 10
 #define CNC_MAX_JOG_RATE_MS 100
 #define CNC_CMD_TIMEOUT_MS 3000
-#define CNC_STATUS_TIMEOUT_MS 800
+#define CNC_STATUS_TIMEOUT_MS 3000
 
 #endif // _CNC_H_

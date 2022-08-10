@@ -47,7 +47,7 @@ lv_obj_t* uiCreateStatusBar(lv_obj_t* parent) {
    // uiStatusBarTime
     uiStatusBarTime = lv_label_create(uiStatusBar);
     lv_obj_set_size(uiStatusBarTime, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-    lv_obj_set_pos(uiStatusBarTime, -30, 0);
+    lv_obj_set_pos(uiStatusBarTime, -70, 0);
     lv_obj_set_align(uiStatusBarTime, LV_ALIGN_RIGHT_MID);
     UI_TE(lv_label_set_text(uiStatusBarTime, FST("20:00:11")));
 
@@ -55,7 +55,7 @@ lv_obj_t* uiCreateStatusBar(lv_obj_t* parent) {
     uiStatusBarBattery = lv_label_create(uiStatusBar);
     lv_obj_set_size(uiStatusBarBattery, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     lv_obj_set_align(uiStatusBarBattery, LV_ALIGN_RIGHT_MID);
-    lv_label_set_text(uiStatusBarBattery, LV_SYMBOL_BATTERY_FULL);
+    lv_label_set_text(uiStatusBarBattery, "100 " LV_SYMBOL_BATTERY_FULL);
 
     // uiStatusBarState
     uiStatusBarState = lv_label_create(uiStatusBar);

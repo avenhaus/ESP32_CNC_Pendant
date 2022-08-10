@@ -75,7 +75,7 @@ GPIO_34 - GPIO_39 have no internal pullup / pulldown.
 */
 
 
-// #define USE_IPS_DISPLAY 1 // ILI9481 instead of ILI9488
+
 // The IPS display looks better, but is slower as ILI9481 can only be run at 15MHz vs 70MHz SPI for ILI9488.
 // IPS is also more expensive.
 // 10.66 FPS vs 3.59 FPS
@@ -83,6 +83,8 @@ GPIO_34 - GPIO_39 have no internal pullup / pulldown.
 //   CMD_PWSET  , 3, 0x07, 0x42, 0x18,
 // to:
 //   CMD_PWSET  , 3, 0x07, 0x42, 0x17,
+//
+// #define USE_IPS_DISPLAY 1 // ILI9481 instead of ILI9488
 
 #define LCD_SCK_PIN 18
 #define LCD_MOSI_PIN 23
@@ -115,7 +117,7 @@ GPIO_34 - GPIO_39 have no internal pullup / pulldown.
 
 #define ADC_VREF 1100
 
-#define BATTERY_PIN -1 // 34
+#define BATTERY_PIN 34
 
 #define L_JOY_X_PIN 32 
 #define L_JOY_Y_PIN 33 

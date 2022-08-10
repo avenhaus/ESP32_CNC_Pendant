@@ -287,9 +287,10 @@ bool _cncJoyJog() {
 void tcpClientRun(uint32_t now) {
     if (_isStreamConnected && !cncTcpConnection.isConnected()) {
         cncSetConnectionState(CCS_CONNECTION_LOST);
+        _isStreamConnected = false;
     }
     if (now > _tcpConnectRetryTS && !cncTcpConnection.isConnected()) {
-        _tcpConnectRetryTS = now + 3000;
+        _tcpConnectRetryTS = now + 4000;
         DEBUG_printf(FST("Connecting to %s:%d\n"), configCncHost.get(), configCncPort.get());
         if (cncTcpConnection.connect(configCncHost.get(), configCncPort.get(), 3000) != TcpConnection::Accepted) {
             DEBUG_printf(FST("Could not connect to CNC %s:%d\n"), configCncHost.get(), configCncPort.get());
@@ -630,7 +631,8 @@ CncAxis::CncAxis(const char* groupName, CncAxisEnum axis_, char letter_, float d
     maxTravel(FST("Max Pos"), defaultMaxTravel, FST("Maximum axis machine coordinate"), 0, &configGroup),
     throttle(FST("Throttle"), 0.0, FST("Analog jog throttle (joystick"), 0, &configGroup),
     machinePos(FST("Machine Pos"), 0.0, FST("Current axis machine postion"), 0, &configGroup),
-    workCoordinate(FST("Work Coord"), 0.0, FST("Current axis work coordiante"), 0, &configGroup)
+    workPos(FST("Work Pos"), 0.0, FST("Current axis work position"), 0, &configGroup),
+    workCoordinate(0.0)
     {}
 
 float CncAxis::incFeed(int32_t steps) {
@@ -676,7 +678,7 @@ void CncAxis::jog(int steps) {
 
 void CncAxis::showCoordinates() {
     if (axis == CNC_AXIS_NONE || axis > CNC_AXIS_A ) { return; }
-    uiUpdateAxisValue(uiAxis[axis-1].work, machinePos.get() - workCoordinate.get() );
+    uiUpdateAxisValue(uiAxis[axis-1].work, workPos.get() );
     uiUpdateAxisValue(uiAxis[axis-1].machine, machinePos.get());
 }
 

@@ -3,8 +3,9 @@
 
 #include "Arduino.h"
 
-#ifndef BATTERY_CONV_FACTOR
-#define BATTERY_CONV_FACTOR ((56.0 + 33.0) / 56.0)
+// Green LED is used to drop battery voltage by 1.685V (measured across LED) so we can safely measure up to 5V.
+#ifndef BATTERY_LED_DROP_V
+#define BATTERY_LED_DROP_V 1.685
 #endif
 
 #ifndef BATTERY_CELLS

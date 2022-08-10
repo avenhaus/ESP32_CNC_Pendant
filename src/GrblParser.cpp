@@ -18,6 +18,7 @@ extern bool _cncIsConfigResponse;
 static const char* _grblStatusTerm = FST("<>|:, \n\r");
 static const char* _grblInfoTerm = FST("/=\n\r");
 
+
 size_t _readCncToken(const char* src, char* token, size_t max, const char* term) {
     size_t n = 0;
     while (n < max) {
@@ -117,12 +118,13 @@ void _grblHandleStatusLine(const char* line) {
     _cncStatusResponseTs = millis();
     size_t n = 0;
     size_t i = 0;
-    typedef enum CncReadStateEnum {PS_START, PS_STATE, PS_STATE_DONE, PS_MPOS, PS_FS, PS_OV, PS_WCO, PS_PN, PS_DONE } CncReadStateEnum;
+    typedef enum CncReadStateEnum {PS_START, PS_STATE, PS_STATE_DONE, PS_MPOS, PS_WPOS, PS_FS, PS_OV, PS_WCO, PS_PN, PS_BF, PS_UNKNOWN, PS_DONE } CncReadStateEnum;
     CncReadStateEnum state = PS_START;
     size_t p = 0;
     bool gotPinStates = false;
     int maxAxis = -1;
     char token[64];
+    bool isWPos = false;
     
     do {
         i = _readCncToken(line+n, token, sizeof(token), _grblStatusTerm);
@@ -136,21 +138,34 @@ void _grblHandleStatusLine(const char* line) {
         }
         else if (sep == ':') {
             if (!strcmp(token, FST("MPos"))) { state = PS_MPOS; }
+            else if (!strcmp(token, FST("WPos"))) { state = PS_WPOS; }
             else if (!strcmp(token, FST("WCO"))) { state = PS_WCO; }
             else if (!strcmp(token, FST("FS"))) { state = PS_FS; }
             else if (!strcmp(token, FST("Ov"))) { state = PS_OV; }
             else if (!strcmp(token, FST("Pn"))) { state = PS_PN; }
-            else { DEBUG_printf(FST("Unknown CNC info token: %s\n"), token); }
+            else if (!strcmp(token, FST("Bf"))) { state = PS_BF; }
+            else { DEBUG_printf(FST("Unknown CNC info token: %s\n"), token); state = PS_UNKNOWN; }
         }
         else if (state == PS_MPOS) {
             if (p < CNC_AXIS_MAX-1) { 
                 cncAxis[p].machinePos.set(atof(token));
+                // DEBUG_printf(FST("%c MPos: %s %f %f\n"), cncAxis[p].letter, token, atof(token), cncAxis[p].machinePos.get());
+                maxAxis = std::max(maxAxis, (int)p);
+            }
+
+        }
+        else if (state == PS_WPOS) {
+            isWPos = true;
+            if (p < CNC_AXIS_MAX-1) { 
+                cncAxis[p].workPos.set(atof(token));
+                // DEBUG_printf(FST("%c WPos: %s %f %f\n"), cncAxis[p].letter, token, atof(token), cncAxis[p].workPos.get());
                 maxAxis = std::max(maxAxis, (int)p);
             }
         }
         else if (state == PS_WCO) {
             if (p < CNC_AXIS_MAX-1) { 
-                cncAxis[p].workCoordinate.set(atof(token)); 
+                cncAxis[p].workCoordinate = atof(token); 
+                // DEBUG_printf(FST("%c WCO: %s %f %f\n"), cncAxis[p].letter, token, atof(token), cncAxis[p].workCoordinate);
                 maxAxis = std::max(maxAxis, (int)p);
             }
         }
@@ -188,6 +203,8 @@ void _grblHandleStatusLine(const char* line) {
             strncpy(cncPinStates, token, sizeof(cncPinStates)-1);
             cncPinStates[sizeof(cncPinStates)-1] = '\0';
         }
+        else if (state == PS_BF) {
+        }
         else { DEBUG_printf(FST("Unknown CNC state token:%s sep=%c state=%d\n"), token, sep, state); }
         if (sep == ',') { p++; }
         else { p = 0; }
@@ -204,7 +221,14 @@ void _grblHandleStatusLine(const char* line) {
             lv_obj_set_style_bg_color(uiCncPinLabel, lv_color_hex(0x808080), LV_PART_MAIN | LV_STATE_DEFAULT);
         }
     }
-    for (int a=0; a<=maxAxis; a++) { cncAxis[a].showCoordinates(); }
+    for (int a=0; a<=maxAxis; a++) { 
+        if (isWPos) {
+            cncAxis[a].machinePos.set(cncAxis[a].workPos.get() + cncAxis[a].workCoordinate);
+        } else {
+            cncAxis[a].workPos.set(cncAxis[a].machinePos.get() - cncAxis[a].workCoordinate);
+        }
+        cncAxis[a].showCoordinates(); 
+    }
     if (stateCncConnectionState.get() == CCS_TIMEOUT) { cncSetConnectionState(CCS_CONNECTED); }
 }
 
