@@ -16,6 +16,7 @@
 TcpConnection cncTcpConnection;
 static uint32_t _tcpConnectRetryTS = 0;
 void tcpClientRun(uint32_t now);
+bool _tcpConnectTaskStarted = false;
 #endif
 
 const char* _axisInfoCmd[] PROGMEM = {
@@ -283,26 +284,29 @@ bool _cncJoyJog() {
 }
 
 #if ENABLE_WIFI
-// TODO: Turn this into background task
-void tcpClientRun(uint32_t now) {
-    if (_isStreamConnected && !cncTcpConnection.isConnected()) {
-        cncSetConnectionState(CCS_CONNECTION_LOST);
-        _isStreamConnected = false;
-    }
-    if (now > _tcpConnectRetryTS && !cncTcpConnection.isConnected()) {
-        _tcpConnectRetryTS = now + 4000;
-        DEBUG_printf(FST("Connecting to %s:%d\n"), configCncHost.get(), configCncPort.get());
-        if (cncTcpConnection.connect(configCncHost.get(), configCncPort.get(), 3000) != TcpConnection::Accepted) {
-            DEBUG_printf(FST("Could not connect to CNC %s:%d\n"), configCncHost.get(), configCncPort.get());
+void _tcpConnectTask(void* pvParameters) {
+    while(true) {
+        if (_isStreamConnected && !cncTcpConnection.isConnected()) {
+            cncSetConnectionState(CCS_CONNECTION_LOST);
             _isStreamConnected = false;
-            return;
-        } 
-        DEBUG_println(FST("CNC connected via TCP"));
-        _isStreamConnected = true;
-        CncConnectionStateEnum state = (CncConnectionStateEnum) stateCncConnectionState.get();
-        if (state != CCS_CONNECTING && state != CCS_GET_CONFIG) {
-            cncSetConnectionState(CCS_CONNECTED);
         }
+        uint32_t now = millis();
+        if (now > _tcpConnectRetryTS && !cncTcpConnection.isConnected()) {
+            _tcpConnectRetryTS = now + 4000;
+            DEBUG_printf(FST("Connecting to %s:%d\n"), configCncHost.get(), configCncPort.get());
+            if (cncTcpConnection.connect(configCncHost.get(), configCncPort.get(), 3000) != TcpConnection::Accepted) {
+                DEBUG_printf(FST("Could not connect to CNC %s:%d\n"), configCncHost.get(), configCncPort.get());
+                _isStreamConnected = false;
+                return;
+            } 
+            DEBUG_println(FST("CNC connected via TCP"));
+            _isStreamConnected = true;
+            CncConnectionStateEnum state = (CncConnectionStateEnum) stateCncConnectionState.get();
+            if (state != CCS_CONNECTING && state != CCS_GET_CONFIG) {
+                cncSetConnectionState(CCS_CONNECTED);
+            }
+        }
+        vTaskDelay(100);
     }
 }
 #endif
@@ -404,6 +408,16 @@ void setCncConnection() {
         case CCT_WIFI:
             cncStream = &cncTcpConnection;
             _isStreamConnected = cncTcpConnection.isConnected();
+            if (!_tcpConnectTaskStarted) {
+                xTaskCreate(
+                    _tcpConnectTask, // Task function
+                    FST("connect"),  // String with name of task
+                    2048,            // Stack size in bytes
+                    NULL,            // Parameter passed as input of the task
+                    1,               // Priority of the task.
+                    NULL);           // Task handle.
+                _tcpConnectTaskStarted = true;
+            }
             break;
 #endif
 
@@ -446,10 +460,6 @@ void cncInit() {
 
 void cncRun(uint32_t now) {
     if (now == 0) { now = millis(); }
-
-#if ENABLE_WIFI
-    if (cncStream == &cncTcpConnection) { tcpClientRun(now); }
-#endif
 
     if (cncStream && _isStreamConnected) {
         

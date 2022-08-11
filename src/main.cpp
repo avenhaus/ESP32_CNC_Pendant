@@ -59,7 +59,6 @@ void _inputTask(void* pvParameters) {
       }*/
         vTaskDelay(1);
     }
- 
 }
 
 void setup() {
@@ -107,10 +106,10 @@ void setup() {
 
   xTaskCreatePinnedToCore(
     _inputTask,     // Task function
-    "net",          // String with name of task
+    FST("input"),   // String with name of task
     2048,           // Stack size in bytes
     NULL,           // Parameter passed as input of the task
-    1,              // Priority of the task.
+    2,              // Priority of the task.
     NULL,           // Task handle.
     1);             // Core
 
