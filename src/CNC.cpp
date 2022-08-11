@@ -200,6 +200,8 @@ const char* CNC_CMD_HOME_ALL = FST("$H");
 const char* CNC_CMD_ZERO_ALL = FST("G10 L20 P0 X0 Y0 Z0 A0");
 const char* CNC_CMD_ZERO_XYZ = FST("G10 L20 P0 X0 Y0 Z0");
 const char* CNC_CMD_RESTART = FST("$Bye");
+const char* CNC_CMD_GO_WCO_0_A = FST("G00 X0Y0\nG00 G21 Z10");
+const char* CNC_CMD_GO_WCO_0_B = FST("G00 G21 Z10\nG00 X0Y0");
 
 
 /*==========================================================*\
@@ -297,13 +299,13 @@ void _tcpConnectTask(void* pvParameters) {
             if (cncTcpConnection.connect(configCncHost.get(), configCncPort.get(), 3000) != TcpConnection::Accepted) {
                 DEBUG_printf(FST("Could not connect to CNC %s:%d\n"), configCncHost.get(), configCncPort.get());
                 _isStreamConnected = false;
-                return;
-            } 
-            DEBUG_println(FST("CNC connected via TCP"));
-            _isStreamConnected = true;
-            CncConnectionStateEnum state = (CncConnectionStateEnum) stateCncConnectionState.get();
-            if (state != CCS_CONNECTING && state != CCS_GET_CONFIG) {
-                cncSetConnectionState(CCS_CONNECTED);
+            } else {
+                DEBUG_println(FST("CNC connected via TCP"));
+                _isStreamConnected = true;
+                CncConnectionStateEnum state = (CncConnectionStateEnum) stateCncConnectionState.get();
+                if (state != CCS_CONNECTING && state != CCS_GET_CONFIG) {
+                    cncSetConnectionState(CCS_CONNECTED);
+                }
             }
         }
         vTaskDelay(100);

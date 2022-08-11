@@ -93,6 +93,8 @@ extern const char* CNC_CMD_HOME_ALL;
 extern const char* CNC_CMD_ZERO_ALL;
 extern const char* CNC_CMD_ZERO_XYZ;
 extern const char* CNC_CMD_RESTART;
+extern const char* CNC_CMD_GO_WCO_0_A;
+extern const char* CNC_CMD_GO_WCO_0_B;
 
 
 /* ============================================== *\

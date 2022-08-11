@@ -175,6 +175,11 @@ void loop() {
          showMessageToast(FST("Home All"), 3000);
          cncSend(CNC_CMD_HOME_ALL);
       }
+      if (RIGHT_BLACK_BUTTON_BIT >= 0 && justPressed & (1 << RIGHT_BLACK_BUTTON_BIT)) { 
+         showMessageToast(FST("Go to zero"), 3000);
+         if (cncAxis[2].machinePos.get() < 10.0 ) { cncSend(CNC_CMD_GO_WCO_0_B); }
+         else { cncSend(CNC_CMD_GO_WCO_0_A); }
+      }
     }
 
     float jjMode = !EX_INPUT(SLOW_BUTTON_BIT) ? 0.01 : 0.1;
