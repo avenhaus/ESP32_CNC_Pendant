@@ -61,6 +61,11 @@ lv_obj_t* uiCreateButtons(lv_obj_t* parent, lv_coord_t x, lv_coord_t y) {
     uiButton[UIB_MACRO] =     uiCreateButton(parent, x+35, y+105, bs, bs, LV_SYMBOL_LIST, &lv_font_montserrat_22);
     uiButton[UIB_SETTINGS] = uiCreateButton(parent, x+70, y+105, bs, bs, LV_SYMBOL_SETTINGS, &lv_font_montserrat_22);
 
+    uiCreateButton(parent, x+109, y+0, bs, bs, FST("0"), &lv_font_montserrat_22);
+    uiCreateButton(parent, x+109, y+35, bs, bs, FST("1"), &lv_font_montserrat_22);
+    uiCreateButton(parent, x+109, y+70, bs, bs, FST("2"), &lv_font_montserrat_22);
+    uiCreateButton(parent, x+109, y+105, bs, bs, FST("3"), &lv_font_montserrat_22);
+
     // uiButton[UIB_RESET] = uiCreateButton(parent, x   , y+70, bs, bs, LV_SYMBOL_POWER, &lv_font_montserrat_22);
     // uiButton[UIB_HELP] =     uiCreateButton(parent, x+70, y+70, bs, bs, FST("?"), &lv_font_montserrat_22);
 	

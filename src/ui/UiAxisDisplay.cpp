@@ -63,34 +63,40 @@ void uiCreatePanelAxis(UiAxisCoord& uiAxis, lv_obj_t* parent, char letter, char 
 }
 
 lv_obj_t* uiCreatePanelWAxis(lv_obj_t* parent, lv_coord_t x, lv_coord_t y) {
-    uiPanelWAxis = uiCreatePanel(parent, &lv_font_montserrat_32, x, y, 244);
+    uiPanelWAxis = uiCreatePanel(parent, &lv_font_roboto_mono_numbers_32, x, y, 260);
 
-    uiCreatePanelAxis(uiAxis[0].work, uiPanelWAxis, 'X', 'w', UI_AXIS_PREC, -32, 0, _uiGetNewAxisPos);
-    uiCreatePanelAxis(uiAxis[1].work, uiPanelWAxis, 'Y', 'w', UI_AXIS_PREC, -32, 32, _uiGetNewAxisPos);
-    uiCreatePanelAxis(uiAxis[2].work, uiPanelWAxis, 'Z', 'w', UI_AXIS_PREC, -32, 64, _uiGetNewAxisPos);
-    uiCreatePanelAxis(uiAxis[3].work, uiPanelWAxis, 'A', 'w', UI_AXIS_PREC, -32, 96, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[0].work, uiPanelWAxis, 'X', 'w', UI_AXIS_PREC, -58, 0, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[1].work, uiPanelWAxis, 'Y', 'w', UI_AXIS_PREC, -58, 32, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[2].work, uiPanelWAxis, 'Z', 'w', UI_AXIS_PREC, -58, 64, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[3].work, uiPanelWAxis, 'A', 'w', UI_AXIS_PREC, -58, 96, _uiGetNewAxisPos);
 
-    const int xpad = -2;
+    int xpad = -29;
     const int ypad = 5;
-    uiAxis[0].wZeroButton = uiCreateButton(uiPanelWAxis, xpad, ypad +  0, 25, 25, FST("0"), &lv_font_montserrat_22, LV_ALIGN_TOP_RIGHT);
+    uiAxis[0].wZeroButton = uiCreateButtonSmall(uiPanelWAxis, xpad, ypad +  0, 25, 25, FST("0"), &lv_font_montserrat_22, LV_ALIGN_TOP_RIGHT);
     lv_obj_set_style_text_decor(lv_obj_get_child(uiAxis[0].wZeroButton, 0), LV_TEXT_DECOR_STRIKETHROUGH, LV_PART_MAIN | LV_STATE_DEFAULT);
-    uiAxis[1].wZeroButton = uiCreateButton(uiPanelWAxis, xpad, ypad + 32, 25, 25, FST("0"), &lv_font_montserrat_22, LV_ALIGN_TOP_RIGHT);
+    uiAxis[1].wZeroButton = uiCreateButtonSmall(uiPanelWAxis, xpad, ypad + 32, 25, 25, FST("0"), &lv_font_montserrat_22, LV_ALIGN_TOP_RIGHT);
     lv_obj_set_style_text_decor(lv_obj_get_child(uiAxis[1].wZeroButton, 0), LV_TEXT_DECOR_STRIKETHROUGH, LV_PART_MAIN | LV_STATE_DEFAULT);
-    uiAxis[2].wZeroButton = uiCreateButton(uiPanelWAxis, xpad, ypad + 64, 25, 25, FST("0"), &lv_font_montserrat_22, LV_ALIGN_TOP_RIGHT);
+    uiAxis[2].wZeroButton = uiCreateButtonSmall(uiPanelWAxis, xpad, ypad + 64, 25, 25, FST("0"), &lv_font_montserrat_22, LV_ALIGN_TOP_RIGHT);
     lv_obj_set_style_text_decor(lv_obj_get_child(uiAxis[2].wZeroButton, 0), LV_TEXT_DECOR_STRIKETHROUGH, LV_PART_MAIN | LV_STATE_DEFAULT);
-    uiAxis[3].wZeroButton = uiCreateButton(uiPanelWAxis, xpad, ypad + 96, 25, 25, FST("0"), &lv_font_montserrat_22, LV_ALIGN_TOP_RIGHT);
+    uiAxis[3].wZeroButton = uiCreateButtonSmall(uiPanelWAxis, xpad, ypad + 96, 25, 25, FST("0"), &lv_font_montserrat_22, LV_ALIGN_TOP_RIGHT);
     lv_obj_set_style_text_decor(lv_obj_get_child(uiAxis[3].wZeroButton, 0), LV_TEXT_DECOR_STRIKETHROUGH, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    xpad = 0;
+    uiAxis[0].wHomeButton = uiCreateButtonSmall(uiPanelWAxis, xpad, ypad +  0, 25, 25, LV_SYMBOL_HOME, &lv_font_montserrat_18, LV_ALIGN_TOP_RIGHT);
+    uiAxis[1].wHomeButton = uiCreateButtonSmall(uiPanelWAxis, xpad, ypad + 32, 25, 25, LV_SYMBOL_HOME, &lv_font_montserrat_18, LV_ALIGN_TOP_RIGHT);
+    uiAxis[2].wHomeButton = uiCreateButtonSmall(uiPanelWAxis, xpad, ypad + 64, 25, 25, LV_SYMBOL_HOME, &lv_font_montserrat_18, LV_ALIGN_TOP_RIGHT);
+    uiAxis[3].wHomeButton = uiCreateButtonSmall(uiPanelWAxis, xpad, ypad + 96, 25, 25, LV_SYMBOL_HOME, &lv_font_montserrat_18, LV_ALIGN_TOP_RIGHT);
 
     return uiPanelWAxis;
 }
 
 lv_obj_t* uiCreatePanelMAxis(lv_obj_t* parent, lv_coord_t x, lv_coord_t y) {
-    uiPanelMAxis = uiCreatePanel(parent, &lv_font_montserrat_32, x, y, 215);
+    uiPanelMAxis = uiCreatePanel(parent, &lv_font_roboto_mono_numbers_32, x, y, 204);
 
-    uiCreatePanelAxis(uiAxis[0].machine, uiPanelMAxis, 'X', 'm', UI_AXIS_PREC, 0, 0, _uiGetNewAxisPos);
-    uiCreatePanelAxis(uiAxis[1].machine, uiPanelMAxis, 'Y', 'm', UI_AXIS_PREC, 0, 32, _uiGetNewAxisPos);
-    uiCreatePanelAxis(uiAxis[2].machine, uiPanelMAxis, 'Z', 'm', UI_AXIS_PREC, 0, 64, _uiGetNewAxisPos);
-    uiCreatePanelAxis(uiAxis[3].machine, uiPanelMAxis, 'A', 'm', UI_AXIS_PREC, 0, 96, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[0].machine, uiPanelMAxis, 'X', 'm', UI_AXIS_PREC, 1, 0, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[1].machine, uiPanelMAxis, 'Y', 'm', UI_AXIS_PREC, 1, 32, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[2].machine, uiPanelMAxis, 'Z', 'm', UI_AXIS_PREC, 1, 64, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[3].machine, uiPanelMAxis, 'A', 'm', UI_AXIS_PREC, 1, 96, _uiGetNewAxisPos);
 
     return uiPanelMAxis;
 }

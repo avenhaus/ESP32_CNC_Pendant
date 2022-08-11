@@ -30,9 +30,9 @@ void uiMainScreenInit(void) {
     lv_obj_clear_flag(uiMainScreen, LV_OBJ_FLAG_SCROLLABLE);
     uiCreateStatusBar(uiMainScreen);
     uiCreatePanelWAxis(uiMainScreen, 5, 29);
-    uiCreatePanelMAxis(uiMainScreen, 260, 29);
+    uiCreatePanelMAxis(uiMainScreen, 272, 29);
     uiCreatePanelSettings(uiMainScreen, 5, 183);
-    uiCreateButtons(uiMainScreen, 378, 181);
+    uiCreateButtons(uiMainScreen, 338, 181);
     uiCreateKeyboard(uiMainScreen);
 
     uiInputLockToast = lv_label_create(uiMainScreen);

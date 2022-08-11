@@ -29,6 +29,7 @@ typedef struct UiAxis {
     UiAxisCoord work;
     UiAxisCoord machine;
     lv_obj_t* wZeroButton;
+    lv_obj_t* wHomeButton;
 } UiAxis;
 
 
@@ -70,6 +71,9 @@ extern lv_obj_t * uiMessageToast;
 extern lv_obj_t * uiErrorToast;
 
 extern const lv_font_t lv_font_icon_22;
+extern const lv_font_t lv_font_roboto_mono_numbers_18;
+extern const lv_font_t lv_font_roboto_mono_numbers_22;
+extern const lv_font_t lv_font_roboto_mono_numbers_32;
 
 // Buttons
 lv_obj_t* uiCreateButtons(lv_obj_t* parent, lv_coord_t x, lv_coord_t y);

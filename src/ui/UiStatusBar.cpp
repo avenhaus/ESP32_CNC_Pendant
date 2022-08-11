@@ -47,8 +47,9 @@ lv_obj_t* uiCreateStatusBar(lv_obj_t* parent) {
    // uiStatusBarTime
     uiStatusBarTime = lv_label_create(uiStatusBar);
     lv_obj_set_size(uiStatusBarTime, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-    lv_obj_set_pos(uiStatusBarTime, -70, 0);
     lv_obj_set_align(uiStatusBarTime, LV_ALIGN_RIGHT_MID);
+    lv_obj_set_style_text_font(uiStatusBarTime, &lv_font_roboto_mono_numbers_18, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_pos(uiStatusBarTime, -66, 0);
     UI_TE(lv_label_set_text(uiStatusBarTime, FST("20:00:11")));
 
    // uiStatusBarBattery
@@ -61,6 +62,7 @@ lv_obj_t* uiCreateStatusBar(lv_obj_t* parent) {
     uiStatusBarState = lv_label_create(uiStatusBar);
     lv_obj_set_size(uiStatusBarState, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     lv_obj_set_align(uiStatusBarState, LV_ALIGN_CENTER);
+    lv_obj_set_pos(uiStatusBarState, -10, 0);
     UI_TE(lv_label_set_text(uiStatusBarState, FST("Not Connected")));
 
     return uiStatusBar;
