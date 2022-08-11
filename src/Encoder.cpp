@@ -4,6 +4,13 @@
 // Encoder Lookup table
 static const int8_t ENCODER_STATES[] PROGMEM = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0}; 
 
+void IRAM_ATTR Encoder::encoderISR(void * arg) {
+	Encoder* enc = (Encoder*)arg;
+  uint8_t newAB = digitalRead(enc->_pinA)<<1 | digitalRead(enc->_pinB);
+  //newAB = (~newAB) & 3;  // Idle should be high
+  enc->update(newAB);
+}
+
 // KY-040 generates pulses of about 5ms and as low as 2ms.
 // KY-040 generates a lot of noise. The lookup table helps to deal with that.
 int32_t Encoder::update(uint8_t inputAB) {
@@ -25,4 +32,12 @@ int32_t Encoder::update(uint8_t inputAB) {
     _state = 0;
   } else { delta = 0; }
   return counter;
+}
+
+void Encoder::attachInterrupt(int pinA, int pinB) {
+  if(pinA < 0 ||  pinB < 0 || _isIsrAttached) { return; }
+  _pinA = pinA;
+  _pinB = pinB;
+  attachInterruptArg(digitalPinToInterrupt(_pinA), encoderISR, this, CHANGE);
+  attachInterruptArg(digitalPinToInterrupt(_pinB), encoderISR, this, CHANGE);
 }

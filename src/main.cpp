@@ -42,12 +42,21 @@ uint32_t analogReadTs = 0;
 
 uint32_t inputSameCount = 0;
 
+
+
 void _inputTask(void* pvParameters) {
     while(true) {
-        encoderMain.update(digitalRead(ENCODER0_B_PIN)<<1 | digitalRead(ENCODER0_A_PIN));
+        // (Now ISR) encoderMain.update((~(digitalRead(ENCODER0_B_PIN)<<1 | digitalRead(ENCODER0_A_PIN))) & 3);
         getExtendedInputs();
         encoderLeft.update((extended_inputs >> LEFT_ENCODER1_A_BIT) & 3);
         encoderRight.update((extended_inputs >> RIGHT_ENCODER1_A_BIT) & 3);
+        /*
+      if ((millis() % 1000) == 0) {
+        DEBUG_printf("Encoder M: %d\n", digitalRead(ENCODER0_B_PIN)<<1 | digitalRead(ENCODER0_A_PIN));
+        DEBUG_printf("Encoder L: %d\n", (extended_inputs >> LEFT_ENCODER1_A_BIT) & 3);
+        DEBUG_printf("Encoder R: %d\n", (extended_inputs >> RIGHT_ENCODER1_A_BIT) & 3);
+        DEBUG_printf("inputs: %x\n", extended_inputs);
+      }*/
         vTaskDelay(1);
     }
  
@@ -83,6 +92,7 @@ void setup() {
   #if 1  
   pinMode(ENCODER0_A_PIN, INPUT_PULLUP);
   pinMode(ENCODER0_B_PIN, INPUT_PULLUP);
+  encoderMain.attachInterrupt(ENCODER0_A_PIN, ENCODER0_B_PIN);
   #else
   ESP32Encoder::useInternalWeakPullResistors=UP;
   //	encoderMainDial.attachFullQuad(ENCODER0_A_PIN, ENCODER0_B_PIN);
