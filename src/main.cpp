@@ -180,7 +180,7 @@ void loop() {
       }
       if (RIGHT_BLACK_BUTTON_BIT >= 0 && justPressed & (1 << RIGHT_BLACK_BUTTON_BIT)) { 
          showMessageToast(FST("Go to zero"), 3000);
-         if (cncAxis[2].machinePos.get() < 10.0 ) { cncSend(CNC_CMD_GO_WCO_0_B); }
+         if (cncIsBelowHover()) { cncSend(CNC_CMD_GO_WCO_0_B); }
          else { cncSend(CNC_CMD_GO_WCO_0_A); }
       }
     }

@@ -34,10 +34,13 @@ static int _highlightedSetting = -1;
 
 static void _uiJogSettingUpdated(float value, bool isCancelled, void* cbData) {
     if (isCancelled) { return; }
-    UiSetting* uia = (UiSetting*) cbData;
+    UiSetting* uis = (UiSetting*) cbData;
+    /*
     char buffer[64];
-    sprintf(buffer, uia->fmt, value);
-    lv_label_set_text(uia->text, buffer);
+    sprintf(buffer, uis->fmt, value);
+    lv_label_set_text(uis->text, buffer);
+    */
+    if (uis->cb) { uis->cb(value, uis->cbData); }
 }
 
 static void _uiGetNewSetting(lv_event_t* e) {
@@ -47,7 +50,7 @@ static void _uiGetNewSetting(lv_event_t* e) {
     UiSetting* uis = (UiSetting*) lv_event_get_user_data(e);
     char buffer[64];
     sprintf(buffer, FST("New %s"), lv_label_get_text(uis->label));
-    uiShowKeyboard(buffer, nullptr, lv_label_get_text(ta), _uiJogSettingUpdated, uis);
+    uiShowKeyboard(buffer, nullptr, lv_label_get_text(ta), false, _uiJogSettingUpdated, uis);
 }
 
 /* ============================================== *\
@@ -56,6 +59,8 @@ static void _uiGetNewSetting(lv_event_t* e) {
 
 void uiCreatePanelSetting(UiSetting& uiSetting, lv_obj_t* parent, const char* label, const char* fmt, lv_coord_t y, lv_event_cb_t ev) {
     uiSetting.fmt = fmt;
+    uiSetting.cb = nullptr;
+    uiSetting.cbData = nullptr;
 
     uiSetting.text = lv_label_create(parent);
     lv_obj_set_size(uiSetting.text, lv_pct(100), LV_SIZE_CONTENT);

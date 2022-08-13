@@ -150,6 +150,7 @@ int32_t cncStateColor[] = {
 ConfigFloat joyJogFeedMode(FST("JJ Mode"), 0.1, FST("Joystick Jog speed level"), 0, &configGroupCNC);
 ConfigFloat joyJogAdjust(FST("JJ Adjust"), 0.92, FST("Adjust calculate jog distance values to match reality"), 0, &configGroupCNC);
 ConfigFloat joyJogDt(FST("JJ DT"), 0.1, FST("Time interval between jog commands"), 0, &configGroupCNC);
+ConfigFloat cncHoverZ(FST("Z Hover"), 10.0, FST("Z distance from work 0 for rapid moves"), 0, &configGroupCNC);
 
 StateFloat stateCncFeed(FST("Feed"), 0.0, FST("Current feed rate"), 0, &configGroupCNC);
 StateFloat stateCncFeedOverride(FST("Feed Override"), 0.0, FST("Feed rate override"), 0, &configGroupCNC);
@@ -202,6 +203,22 @@ const char* CNC_CMD_ZERO_XYZ = FST("G10 L20 P0 X0 Y0 Z0");
 const char* CNC_CMD_RESTART = FST("$Bye");
 const char* CNC_CMD_GO_WCO_0_A = FST("G00 X0Y0\nG00 G21 Z10");
 const char* CNC_CMD_GO_WCO_0_B = FST("G00 G21 Z10\nG00 X0Y0");
+
+const char* GCODE_MOVE = FST("G0");
+const char* GCODE_MOVE_RAPID = FST("G00");
+const char* GCODE_ABSOLUTE = FST("G90");
+const char* GCODE_RELATIVE = FST("G91");
+const char* GCODE_IMPERIAL = FST("G20");
+const char* GCODE_METRIC = FST("G21");
+
+
+
+CncAxis* getCurrentAxis() {
+    size_t currentAxis = configCncCurrentAxis.get();
+    if (!currentAxis || currentAxis > CNC_AXIS_MAX) { return nullptr; }
+    currentAxis--;
+    return &cncAxis[currentAxis];
+}
 
 
 /*==========================================================*\
@@ -283,6 +300,24 @@ bool _cncJoyJog() {
         _isJoyJogging = false;
     }
     return total_feed;
+}
+
+bool cncIsBelowHover() {
+    return cncAxis[2].machinePos.get() < cncHoverZ.get();
+}
+
+void moveAxisCB(float value, bool isRelative, UiAxisCoord* uiAxisCoord) {
+    CncAxis& axis = cncAxis[uiAxisCoord->axis];
+    DEBUG_printf(FST("Move %d %s rel:%d val:%g\n"), uiAxisCoord->axis, lv_label_get_text(uiAxisCoord->label), isRelative, value);
+    const char* gMode = isRelative ? GCODE_RELATIVE : GCODE_ABSOLUTE;
+    const char* gMove = cncIsBelowHover() ? GCODE_MOVE : GCODE_MOVE_RAPID;
+    if (!isRelative && lv_label_get_text(uiAxisCoord->label)[0] == 'm') {
+        value = value - axis.workCoordinate;
+    }
+
+    char buffer[32];
+    sprintf(buffer, FST("%s %s %c%g"), gMode, gMove, axis.letter, value);
+    cncSend(buffer);
 }
 
 #if ENABLE_WIFI
@@ -367,7 +402,8 @@ void cncAxisEncoderPress() {
 }
 
 static void _cncResetAlarm(lv_event_t * e) {
-    DEBUG_println(FST("Reset Alarm"));
+    DEBUG_println(FST("Reset Alarms"));
+    showMessageToast(FST("Reset Alarms"), 3000);
     cncSend(CNC_CMD_ALARM_RESET);
 }
 
@@ -378,12 +414,12 @@ static void _cncSetAxisZeroEvent(lv_event_t * e) {
 
 
 void _showCurrentAxisSettings() {
-    int currentAxis = configCncCurrentAxis.get();
-    if (!currentAxis) { return; }
+    CncAxis* axis = getCurrentAxis();
+    if (!axis) { return; }
     char buffer[32];
-    sprintf(buffer, FST("%g"), cncAxis[currentAxis-1].jogStep.get());   
+    sprintf(buffer, FST("%g"), axis->jogStep.get());   
     lv_label_set_text(uiPanelSettingsJogStep.text, buffer);
-    sprintf(buffer, FST("%g"), cncAxis[currentAxis-1].jogFeed.get());   
+    sprintf(buffer, FST("%g"), axis->jogFeed.get());   
     lv_label_set_text(uiPanelSettingsJogFeed.text, buffer);
 }
 
@@ -458,6 +494,10 @@ void cncInit() {
     _cncGetConfigState = 0;
     _cncConfigResponseCount = 0;
     _cncIsConfigResponse = false;
+
+    uiMoveAxisCB = &moveAxisCB;
+    uiPanelSettingsJogFeed.cb = cncSetJogFeed;
+    uiPanelSettingsJogStep.cb = cncSetJogStep;
 }
 
 void cncRun(uint32_t now) {
@@ -542,11 +582,10 @@ void cncRun(uint32_t now) {
   }
 
   if (_cncBufferedJogSteps && now > (_cncNextJogTs + CNC_MAX_JOG_RATE_MS)) {
-    size_t currentAxis = configCncCurrentAxis.get();
-    if (currentAxis && currentAxis <= CNC_AXIS_MAX) { 
-        currentAxis--;
+    CncAxis* axis = getCurrentAxis();
+    if (axis) { 
         // DEBUG_printf(FST("Flush buffered jog steps: %d\n"), _cncBufferedJogSteps); 
-        cncAxis[currentAxis].jog(_cncBufferedJogSteps);
+        axis->jog(_cncBufferedJogSteps);
     }
     _cncNextJogTs = now + CNC_MAX_JOG_RATE_MS;       
     _cncBufferedJogSteps = 0;
@@ -570,50 +609,70 @@ CncAxisEnum cncIncActiveAxis(int32_t steps) {
     return (CncAxisEnum) currentAxis;
 }
 
-void cncIncJogFeed(int32_t steps) {
-    size_t currentAxis = configCncCurrentAxis.get();
-    if (!currentAxis || currentAxis > CNC_AXIS_MAX) { return; }
-    currentAxis--;
-    cncAxis[currentAxis].incJogFeed(steps);
+void cncShowJogFeed(CncAxis* axis) {
+    if (!axis) { return; }
     char buffer[32];
-    sprintf(buffer, FST("%g"), cncAxis[currentAxis].jogFeed.get());   
+    sprintf(buffer, FST("%g"), axis->jogFeed.get());   
     lv_label_set_text(uiPanelSettingsJogFeed.text, buffer);
 }
 
-void cncIncJogStep(int32_t steps) {
-    size_t currentAxis = configCncCurrentAxis.get();
-    if (!currentAxis || currentAxis > CNC_AXIS_MAX) { return; }
-    currentAxis--;
-    cncAxis[currentAxis].incJogStep(steps);
+
+void cncSetJogFeed(float value, void* cbData) {
+    CncAxis* axis = getCurrentAxis();
+    if (!axis) { return; }
+    axis->setJogFeed(value);
+    cncShowJogFeed(axis);
+}
+
+void cncIncJogFeed(int32_t steps) {
+    CncAxis* axis = getCurrentAxis();
+    if (!axis) { return; }
+    axis->incJogFeed(steps);
+    cncShowJogFeed(axis);
+}
+
+void cncShowJogStep(CncAxis* axis) {
+    if (!axis) { return; }
     char buffer[32];
-    sprintf(buffer, FST("%g"), cncAxis[currentAxis].jogStep.get());   
+    sprintf(buffer, FST("%g"), axis->jogStep.get());   
     lv_label_set_text(uiPanelSettingsJogStep.text, buffer);
 }
 
+void cncSetJogStep(float value, void* cbData) {
+    CncAxis* axis = getCurrentAxis();
+    if (!axis) { return; }
+    axis->setJogStep(value);
+    cncShowJogStep(axis);
+}
+
+void cncIncJogStep(int32_t steps) {
+    CncAxis* axis = getCurrentAxis();
+    if (!axis) { return; }
+    axis->incJogStep(steps);
+    cncShowJogStep(axis);
+}
+
 void cncIncFeed(int32_t steps) {
-    size_t currentAxis = configCncCurrentAxis.get();
-    if (!currentAxis || currentAxis > CNC_AXIS_MAX) { return; }
-    currentAxis--;
-    cncAxis[currentAxis].incFeed(steps);
+    CncAxis* axis = getCurrentAxis();
+    if (!axis) { return; }
+    axis->incFeed(steps);
     char buffer[32];
-    sprintf(buffer, FST("%g"), cncAxis[currentAxis].feed.get());   
+    sprintf(buffer, FST("%g"), axis->feed.get());   
     lv_label_set_text(uiPanelSettingsFeed.text, buffer);
 }
 
 void cncJogAxis(int32_t steps) {
-    size_t currentAxis = configCncCurrentAxis.get();
-    if (!currentAxis || currentAxis > CNC_AXIS_MAX) { return; }
     uint32_t now = millis();
     if (_cncNextJogTs > now) {
         _cncBufferedJogSteps += steps;
         return;
     }
-    currentAxis--;
-    cncAxis[currentAxis].jog(steps + _cncBufferedJogSteps);
+    CncAxis* axis = getCurrentAxis();
+    if (!axis) { return; }
+    axis->jog(steps + _cncBufferedJogSteps);
     _cncNextJogTs = now + CNC_MAX_JOG_RATE_MS;
     _cncBufferedJogSteps = 0;
 }
-
 
 void cncIncSettingsEncoder(int32_t steps) {
     CncEncoderCB cb = cncEncoderCB[cncSettingsEncoderMode];
@@ -659,6 +718,15 @@ float CncAxis::incFeed(int32_t steps) {
     return tmp;
 }
 
+void CncAxis::setJogFeed(float value) {
+    if (value < 1.0) { value = 1.0; }
+    if (value > maxFeed.get()) { value = maxFeed.get(); }
+    jogFeed.set(value);
+    if (axis == CNC_AXIS_X) { cncAxis[CNC_AXIS_Y-1].jogFeed.set(value); }
+    if (axis == CNC_AXIS_Y) { cncAxis[CNC_AXIS_X-1].jogFeed.set(value); }
+    DEBUG_printf(FST("Axis %c jog feed: %g\n"), letter, value);
+}
+
 float CncAxis::incJogFeed(int32_t steps) {
     float tmp = jogFeed.get();
     tmp += 100.0 * steps; 
@@ -669,6 +737,15 @@ float CncAxis::incJogFeed(int32_t steps) {
     if (axis == CNC_AXIS_Y) { cncAxis[CNC_AXIS_X-1].jogFeed.set(tmp); }
     DEBUG_printf(FST("Axis %c jog feed: %g\n"), letter, tmp);
     return tmp;
+}
+
+void CncAxis::setJogStep(float value) {
+    if (value < 0.001) { value = 0.001; }
+    if (value > 100.0) { value = 100.0; }
+    jogStep.set(value);
+    if (axis == CNC_AXIS_X) { cncAxis[CNC_AXIS_Y-1].jogStep.set(value); }
+    if (axis == CNC_AXIS_Y) { cncAxis[CNC_AXIS_X-1].jogStep.set(value); }
+    DEBUG_printf(FST("Axis %c jog step: %g\n"), letter, value);
 }
 
 float CncAxis::incJogStep(int32_t steps) {

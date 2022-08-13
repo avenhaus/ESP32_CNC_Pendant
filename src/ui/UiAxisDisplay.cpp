@@ -10,6 +10,7 @@ lv_obj_t* uiPanelWAxis;
 lv_obj_t* uiPanelMAxis;
 UiAxis uiAxis[6];
 static int _highlightedAxis = -1;
+UiMoveAxisCB uiMoveAxisCB = nullptr;
 
 /* ============================================== *\
  * Event Callbacks
@@ -18,9 +19,8 @@ static int _highlightedAxis = -1;
 static void _uiNewAxisPos(float value, bool isCancelled, void* cbData) {
     if (isCancelled) { return; }
     UiAxisCoord* uia = (UiAxisCoord*) cbData;
-    char buffer[64];
-    sprintf(buffer, uia->fmt, value);
-    lv_label_set_text(uia->text, buffer);
+    extern bool uiKeyboardInputTypeRel;
+    if (uiMoveAxisCB) { uiMoveAxisCB(value, uiKeyboardInputTypeRel, uia); }
 }
 
 static void _uiGetNewAxisPos(lv_event_t* e) {
@@ -29,16 +29,17 @@ static void _uiGetNewAxisPos(lv_event_t* e) {
     lv_obj_t* ta = lv_event_get_target(e);
     UiAxisCoord* uia = (UiAxisCoord*) lv_event_get_user_data(e);
     char buffer[64];
-    sprintf(buffer, FST("New Axis Position %s"), lv_label_get_text(uia->label));
-    uiShowKeyboard(buffer, nullptr, lv_label_get_text(ta), _uiNewAxisPos, uia);
+    sprintf(buffer, FST("Axis %s"), lv_label_get_text(uia->label));
+    uiShowKeyboard(buffer, nullptr, lv_label_get_text(ta), true, _uiNewAxisPos, uia);
 }
 
 /* ============================================== *\
  * Functions
 \* ============================================== */
 
-void uiCreatePanelAxis(UiAxisCoord& uiAxis, lv_obj_t* parent, char letter, char tl, const char* fmt, lv_coord_t x, lv_coord_t y, lv_event_cb_t ev) {
+void uiCreatePanelAxis(UiAxisCoord& uiAxis, lv_obj_t* parent, int axis, char letter, char tl, const char* fmt, lv_coord_t x, lv_coord_t y, lv_event_cb_t ev) {
     uiAxis.fmt = fmt;
+    uiAxis.axis = axis;
  
     uiAxis.text = lv_label_create(parent);
     lv_obj_set_size(uiAxis.text, lv_pct(100), LV_SIZE_CONTENT);
@@ -65,10 +66,10 @@ void uiCreatePanelAxis(UiAxisCoord& uiAxis, lv_obj_t* parent, char letter, char 
 lv_obj_t* uiCreatePanelWAxis(lv_obj_t* parent, lv_coord_t x, lv_coord_t y) {
     uiPanelWAxis = uiCreatePanel(parent, &lv_font_roboto_mono_numbers_32, x, y, 260);
 
-    uiCreatePanelAxis(uiAxis[0].work, uiPanelWAxis, 'X', 'w', UI_AXIS_PREC, -58, 0, _uiGetNewAxisPos);
-    uiCreatePanelAxis(uiAxis[1].work, uiPanelWAxis, 'Y', 'w', UI_AXIS_PREC, -58, 32, _uiGetNewAxisPos);
-    uiCreatePanelAxis(uiAxis[2].work, uiPanelWAxis, 'Z', 'w', UI_AXIS_PREC, -58, 64, _uiGetNewAxisPos);
-    uiCreatePanelAxis(uiAxis[3].work, uiPanelWAxis, 'A', 'w', UI_AXIS_PREC, -58, 96, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[0].work, uiPanelWAxis, 0, 'X', 'w', UI_AXIS_PREC, -58, 0, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[1].work, uiPanelWAxis, 1, 'Y', 'w', UI_AXIS_PREC, -58, 32, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[2].work, uiPanelWAxis, 2, 'Z', 'w', UI_AXIS_PREC, -58, 64, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[3].work, uiPanelWAxis, 3, 'A', 'w', UI_AXIS_PREC, -58, 96, _uiGetNewAxisPos);
 
     int xpad = -29;
     const int ypad = 5;
@@ -93,10 +94,10 @@ lv_obj_t* uiCreatePanelWAxis(lv_obj_t* parent, lv_coord_t x, lv_coord_t y) {
 lv_obj_t* uiCreatePanelMAxis(lv_obj_t* parent, lv_coord_t x, lv_coord_t y) {
     uiPanelMAxis = uiCreatePanel(parent, &lv_font_roboto_mono_numbers_32, x, y, 204);
 
-    uiCreatePanelAxis(uiAxis[0].machine, uiPanelMAxis, 'X', 'm', UI_AXIS_PREC, 1, 0, _uiGetNewAxisPos);
-    uiCreatePanelAxis(uiAxis[1].machine, uiPanelMAxis, 'Y', 'm', UI_AXIS_PREC, 1, 32, _uiGetNewAxisPos);
-    uiCreatePanelAxis(uiAxis[2].machine, uiPanelMAxis, 'Z', 'm', UI_AXIS_PREC, 1, 64, _uiGetNewAxisPos);
-    uiCreatePanelAxis(uiAxis[3].machine, uiPanelMAxis, 'A', 'm', UI_AXIS_PREC, 1, 96, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[0].machine, uiPanelMAxis, 0, 'X', 'm', UI_AXIS_PREC, 1, 0, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[1].machine, uiPanelMAxis, 1, 'Y', 'm', UI_AXIS_PREC, 1, 32, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[2].machine, uiPanelMAxis, 2, 'Z', 'm', UI_AXIS_PREC, 1, 64, _uiGetNewAxisPos);
+    uiCreatePanelAxis(uiAxis[3].machine, uiPanelMAxis, 3, 'A', 'm', UI_AXIS_PREC, 1, 96, _uiGetNewAxisPos);
 
     return uiPanelMAxis;
 }

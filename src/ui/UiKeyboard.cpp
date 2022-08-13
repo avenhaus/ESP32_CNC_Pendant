@@ -12,6 +12,8 @@ lv_obj_t* _uiKeyboardPanel;
 lv_obj_t* _uiKeyboardLabel;
 lv_obj_t* _uiKeyboardTextArea;
 lv_obj_t* _uiKeyboardKeys;
+lv_obj_t* _uiKeyboardAbsRelButton;
+bool uiKeyboardInputTypeRel = false;
 
 UiKeyboardDoneCB _uiKeyboardDoneCallback = nullptr;
 void* _uiKeyboardDoneCallbackData = nullptr;
@@ -83,6 +85,12 @@ static void _uiKeyboardEventCb(lv_event_t * e) {
     }
 }
 
+static void _uiKeyboardEventAbsRelCb(lv_event_t * e) {
+    uiKeyboardInputTypeRel = !uiKeyboardInputTypeRel;
+    if (uiKeyboardInputTypeRel) { lv_label_set_text(lv_obj_get_child(_uiKeyboardAbsRelButton, 0), FST("Rel")); }
+    else { lv_label_set_text(lv_obj_get_child(_uiKeyboardAbsRelButton, 0), FST("Abs")); }
+}
+
 lv_obj_t* uiCreateKeyboard(lv_obj_t* parent) {
 
     // _uiKeyboardPanel
@@ -106,6 +114,9 @@ lv_obj_t* uiCreateKeyboard(lv_obj_t* parent) {
     lv_obj_set_style_pad_top(_uiKeyboardPanel, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_pad_bottom(_uiKeyboardPanel, 8, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_font(_uiKeyboardPanel, &lv_font_montserrat_32, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    _uiKeyboardAbsRelButton = uiCreateButton(_uiKeyboardPanel, 0, -2, 45, 25, FST("Abs"), &lv_font_montserrat_18);
+    lv_obj_add_event_cb(_uiKeyboardAbsRelButton, _uiKeyboardEventAbsRelCb, LV_EVENT_CLICKED, NULL);
 
   // _uiKeyboardLabel
     _uiKeyboardLabel = lv_label_create(_uiKeyboardPanel);
@@ -158,8 +169,10 @@ lv_obj_t* uiCreateKeyboard(lv_obj_t* parent) {
     return _uiKeyboardPanel;
 }
 
-void uiShowKeyboard(const char* description, const char* text, const char* placeholder, UiKeyboardDoneCB cb, void* cbData) {
+void uiShowKeyboard(const char* description, const char* text, const char* placeholder, bool showAbsRel, UiKeyboardDoneCB cb, void* cbData) {
     lv_obj_clear_flag(_uiKeyboardPanel, LV_OBJ_FLAG_HIDDEN);
+    if (showAbsRel) { lv_obj_clear_flag(_uiKeyboardAbsRelButton, LV_OBJ_FLAG_HIDDEN); }
+    else { lv_obj_add_flag(_uiKeyboardAbsRelButton, LV_OBJ_FLAG_HIDDEN); }
     _uiKeyboardDoneCallback = cb;
     _uiKeyboardDoneCallbackData = cbData;
     if (description) { lv_label_set_text(_uiKeyboardLabel, description); }

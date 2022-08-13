@@ -23,6 +23,7 @@ typedef struct UiAxisCoord {
     lv_obj_t* label;
     lv_obj_t* text;
     const char* fmt;
+    int axis;
 } UiAxisCoord;
 
 typedef struct UiAxis {
@@ -32,6 +33,7 @@ typedef struct UiAxis {
     lv_obj_t* wHomeButton;
 } UiAxis;
 
+typedef void (*UiMoveAxisCB)(float value, bool isRelative, UiAxisCoord* uiAxisCoord);
 
 lv_obj_t* uiCreatePanelWAxis(lv_obj_t* parent, lv_coord_t x, lv_coord_t y);
 lv_obj_t* uiCreatePanelMAxis(lv_obj_t* parent, lv_coord_t x, lv_coord_t y);
@@ -41,13 +43,17 @@ void uiHighlightAxis(int axis);
 extern lv_obj_t* uiPanelWAxis;
 extern lv_obj_t* uiPanelMAxis;
 extern UiAxis uiAxis[6];
+extern UiMoveAxisCB uiMoveAxisCB;
 
 
 // Setting Panel
+typedef void (*UiKeyboardCB)(float value, void* cbData);
 typedef struct UiSetting {
     lv_obj_t* label;
     lv_obj_t* text;
     const char* fmt;
+    UiKeyboardCB cb;
+    void* cbData;
 } UiSetting;
 
 lv_obj_t* uiCreatePanelSettings(lv_obj_t* parent, lv_coord_t x, lv_coord_t y);
@@ -83,7 +89,7 @@ extern lv_obj_t* uiButton[UIB_MAX];
 // Keyboard
 typedef void (*UiKeyboardDoneCB)(float value, bool isCancelled, void* cbData);
 lv_obj_t* uiCreateKeyboard(lv_obj_t* parent);
-void uiShowKeyboard(const char* description=nullptr, const char* text=nullptr, const char* placeholder=nullptr, UiKeyboardDoneCB cb=nullptr, void* cbData=nullptr);
+void uiShowKeyboard(const char* description=nullptr, const char* text=nullptr, const char* placeholder=nullptr, bool showAbsRel=false ,UiKeyboardDoneCB cb=nullptr, void* cbData=nullptr);
 
 // Toast
 void showMessageToast(const char* text, uint32_t timeMs=0);

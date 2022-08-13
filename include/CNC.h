@@ -15,8 +15,11 @@ class CncAxis {
 public:
     CncAxis(const char* groupName, CncAxisEnum axis, char letter, float defaultFeed, float defaultJogFeed, float defaultJogStep, float defaultMaxFeed, float defaultMaxTravel);
     void jog(int steps);
+    void setFeed(float value);
     float incFeed(int32_t steps);
+    void setJogFeed(float value);
     float incJogFeed(int32_t steps);
+    void setJogStep(float value);
     float incJogStep(int32_t steps);
     void showCoordinates();
 
@@ -43,6 +46,7 @@ void cncIncFeed(int32_t steps);
 void cncIncJogFeed(int32_t steps);
 void cncIncJogStep(int32_t steps);
 void cncJogAxis(int32_t steps);
+bool cncIsBelowHover();
 
 void cncAxisEncoderPress();
 
@@ -66,6 +70,8 @@ typedef enum CncMachineTypeEnum {CMT_UNKNOWN, CMT_GRBL, CMT_FLUIDNC} CncMachineT
 extern ConfigEnum configCncMachineType;
 void cncSetCncMachineType(CncMachineTypeEnum type);
 
+void cncSetJogFeed(float value, void* cbData);
+void cncSetJogStep(float value, void* cbData);
 
 
 extern StateFloat stateCncFeed;
