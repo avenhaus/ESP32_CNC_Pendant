@@ -61,6 +61,8 @@ void _inputTask(void* pvParameters) {
     }
 }
 
+void logCB(const char* buf) { DEBUG_print(buf); }
+
 void setup() {
 
   pinMode(LED_PIN, OUTPUT);
@@ -77,6 +79,7 @@ void setup() {
   extendedInputSetup();
 
   #if ENABLE_DISPLAY
+  lv_log_register_print_cb(logCB);
   displaySetup();
   displayBootScreen();  
   DEBUG_print(F("Screen Done\n"));
